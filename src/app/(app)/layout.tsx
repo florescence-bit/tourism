@@ -18,14 +18,14 @@ import Header from '@/components/layout/header';
 import Sidebar from '@/components/layout/sidebar';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  // Whether component has mounted on client (prevents hydration mismatch)
-  const [mounted, setMounted] = useState(false);
-
   // Current authenticated user or null
   const [user, setUser] = useState<any>(null);
 
   // Whether auth state is still loading
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Whether component has mounted on client
+  const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -45,8 +45,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       setUser(currentUser);
       setAuthLoading(false);
 
-      // If user signed out AND not on auth page, redirect to /auth
-      if (!currentUser && !isAuthPage) {
+      // Only redirect if:
+      // 1. User is NOT authenticated
+      // 2. NOT on the /auth page (allow unauthenticated access to /auth)
+      // 3. NOT on home page (home page is public)
+      if (!currentUser && pathname !== '/auth' && pathname !== '/') {
         console.debug('[AppLayout] User not authenticated, redirecting to /auth');
         router.push('/auth');
       }
@@ -57,7 +60,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         unsubscribe();
       }
     };
-  }, [router, isAuthPage]);
+  }, [router, pathname]);
 
   // Show loading state while checking authentication
   if (!mounted || authLoading) {
@@ -71,14 +74,30 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // On /auth page: allow unauthenticated users, show full layout with sidebar and header
-  // On other pages: only show if authenticated
-  if (!user && !isAuthPage) {
+  // On /auth page: allow unauthenticated users to access (public page)
+  // Show full layout (sidebar, header, content)
+  if (isAuthPage) {
+    return (
+      <div className="flex h-screen bg-black text-white">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // On protected routes (dashboard, check-in, etc):
+  // Only show if user is authenticated
+  if (!user) {
+    // User will be redirected by useEffect, show nothing while redirecting
     return null;
   }
 
-  // Render layout with sidebar and header for all authenticated pages
-  // Also render for /auth page (even if not authenticated)
+  // User is authenticated; render protected layout with sidebar and header
   return (
     <div className="flex h-screen bg-black text-white">
       <Sidebar />
