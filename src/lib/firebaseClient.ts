@@ -460,16 +460,7 @@ export async function saveNotification(uid: string, payload: Record<string, any>
 /**
  * Generates a human-friendly digital ID using the user's name and stores it
  * together with a generated QR code (data URL) in Firestore under
- * `/users/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
- *
- * @param uid - User's UID
- * @param name - Display name or full name to base the digital id on (optional)
- * @returns Object containing digitalId and qrDataUrl on success, or null on failure
- */
-/**
- * Generates a human-friendly digital ID using the user's name and stores it
- * together with a generated QR code (data URL) in Firestore under
- * `/users/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
+ * `/users/{uid}/digitalIDs/{digitalId}` and also merges into the profile doc.
  *
  * @param uid - User's UID
  * @param name - Display name or full name to base the digital id on (optional)
@@ -531,9 +522,9 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
     }
 
     // Save digital ID to subcollection
-    console.log('[Firebase] Saving digital ID to /users/' + uid + '/digitalIds/' + digitalId);
+    console.log('[Firebase] Saving digital ID to /users/' + uid + '/digitalIDs/' + digitalId);
     try {
-      await setDoc(doc(db, 'users', uid, 'digitalIds', digitalId), { 
+      await setDoc(doc(db, 'users', uid, 'digitalIDs', digitalId), { 
         ...payload, 
         qrDataUrl,
         updatedAt: Date.now()
