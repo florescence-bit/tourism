@@ -487,6 +487,252 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
 }
 
 // ============================================================================
+// CHECK-INS
+// ============================================================================
+
+/**
+ * Saves a check-in location to Firestore.
+ * Check-ins are stored at /profiles/{uid}/checkIns/{checkInId}.
+ *
+ * @param uid - The user's UID
+ * @param checkInData - Object containing location, latitude, longitude, accuracy, place
+ * @returns Promise resolving to the check-in ID if successful, null otherwise
+ */
+export async function saveCheckIn(
+  uid: string,
+  checkInData: {
+    location: string;
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    place?: string;
+  }
+): Promise<string | null> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for saveCheckIn');
+    return null;
+  }
+
+  try {
+    const col = collection(db, 'profiles', uid, 'checkIns');
+    const docRef = await addDoc(col, {
+      ...checkInData,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    console.debug('[Firebase] Check-in saved:', docRef.id);
+    return docRef.id;
+  } catch (error: any) {
+    console.error('[Firebase] saveCheckIn error:', error);
+    return null;
+  }
+}
+
+/**
+ * Retrieves all check-ins for a user, ordered by most recent first.
+ *
+ * @param uid - The user's UID
+ * @returns Promise resolving to array of check-in documents, or empty array on error
+ */
+export async function listCheckIns(uid: string): Promise<Array<Record<string, any>>> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for listCheckIns');
+    return [];
+  }
+
+  try {
+    const col = collection(db, 'profiles', uid, 'checkIns');
+    const q = query(col, orderBy('createdAt', 'desc'));
+    const snaps = await getDocs(q);
+    return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error: any) {
+    console.error('[Firebase] listCheckIns error:', error);
+    return [];
+  }
+}
+
+// ============================================================================
+// REPORTS
+// ============================================================================
+
+/**
+ * Saves an incident report to Firestore.
+ * Reports are stored at /profiles/{uid}/reports/{reportId}.
+ *
+ * @param uid - The user's UID
+ * @param reportData - Object containing incidentType, description, location
+ * @returns Promise resolving to the report ID if successful, null otherwise
+ */
+export async function saveReport(
+  uid: string,
+  reportData: {
+    incidentType: string;
+    description: string;
+    location: string;
+  }
+): Promise<string | null> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for saveReport');
+    return null;
+  }
+
+  try {
+    const col = collection(db, 'profiles', uid, 'reports');
+    const docRef = await addDoc(col, {
+      ...reportData,
+      status: 'submitted',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    console.debug('[Firebase] Report saved:', docRef.id);
+    return docRef.id;
+  } catch (error: any) {
+    console.error('[Firebase] saveReport error:', error);
+    return null;
+  }
+}
+
+/**
+ * Retrieves all reports for a user, ordered by most recent first.
+ *
+ * @param uid - The user's UID
+ * @returns Promise resolving to array of report documents, or empty array on error
+ */
+export async function listReports(uid: string): Promise<Array<Record<string, any>>> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for listReports');
+    return [];
+  }
+
+  try {
+    const col = collection(db, 'profiles', uid, 'reports');
+    const q = query(col, orderBy('createdAt', 'desc'));
+    const snaps = await getDocs(q);
+    return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (error: any) {
+    console.error('[Firebase] listReports error:', error);
+    return [];
+  }
+}
+
+// ============================================================================
+// SETTINGS
+// ============================================================================
+
+/**
+ * Saves user settings to Firestore (merged with profile).
+ * Settings include notificationsEnabled, shareLocation, etc.
+ *
+ * @param uid - The user's UID
+ * @param settings - Object containing user preference settings
+ * @returns Promise resolving to true if successful, false otherwise
+ */
+export async function saveSettings(
+  uid: string,
+  settings: Record<string, any>
+): Promise<boolean> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for saveSettings');
+    return false;
+  }
+
+  try {
+    const ref = doc(db, 'profiles', uid);
+    await setDoc(ref, { settings }, { merge: true });
+    console.debug('[Firebase] Settings saved for user:', uid);
+    return true;
+  } catch (error: any) {
+    console.error('[Firebase] saveSettings error:', error);
+    return false;
+  }
+}
+
+/**
+ * Retrieves user settings from Firestore.
+ *
+ * @param uid - The user's UID
+ * @returns Promise resolving to settings object, or empty object if not found
+ */
+export async function getSettings(uid: string): Promise<Record<string, any>> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for getSettings');
+    return {};
+  }
+
+  try {
+    const ref = doc(db, 'profiles', uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data().settings || {};
+    }
+    return {};
+  } catch (error: any) {
+    console.error('[Firebase] getSettings error:', error);
+    return {};
+  }
+}
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+/**
+ * Retrieves aggregated analytics for a user based on check-ins.
+ * Calculates total check-ins, last check-in time, safety score, etc.
+ *
+ * @param uid - The user's UID
+ * @returns Promise resolving to analytics object with counts and stats
+ */
+export async function getUserAnalytics(uid: string): Promise<Record<string, any>> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for getUserAnalytics');
+    return { totalCheckIns: 0, recentDays: {} };
+  }
+
+  try {
+    const checkIns = await listCheckIns(uid);
+    const reports = await listReports(uid);
+
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    const recentCheckIns = checkIns.filter((c) => c.createdAt >= thirtyDaysAgo);
+    const recentReports = reports.filter((r) => r.createdAt >= thirtyDaysAgo);
+
+    // Group check-ins by day
+    const byDay: Record<string, number> = {};
+    for (const checkIn of recentCheckIns) {
+      const date = new Date(checkIn.createdAt).toISOString().split('T')[0];
+      byDay[date] = (byDay[date] || 0) + 1;
+    }
+
+    // Simple safety score: based on check-ins and no reports
+    const safetyScore = Math.max(50, Math.min(100, 70 + recentCheckIns.length * 2 - recentReports.length * 10));
+
+    return {
+      totalCheckIns: checkIns.length,
+      recentCheckIns30Days: recentCheckIns.length,
+      totalReports: reports.length,
+      recentReports30Days: recentReports.length,
+      safetyScore: Math.round(safetyScore),
+      threatLevel: safetyScore >= 80 ? 'Low' : safetyScore >= 60 ? 'Medium' : 'High',
+      lastCheckInAt: recentCheckIns.length > 0 ? recentCheckIns[0].createdAt : null,
+      checkInsPerDay: byDay,
+    };
+  } catch (error: any) {
+    console.error('[Firebase] getUserAnalytics error:', error);
+    return { totalCheckIns: 0, recentDays: {} };
+  }
+}
+
+// ============================================================================
 // DEFAULT EXPORT
 // ============================================================================
 
@@ -501,6 +747,15 @@ const firebaseClient = {
   saveProfile,
   listNotifications,
   saveNotification,
+  saveCheckIn,
+  listCheckIns,
+  saveReport,
+  listReports,
+  saveSettings,
+  getSettings,
+  getUserAnalytics,
+  generateAndSaveDigitalId,
+  isFirebaseConfigured,
 };
 
 export default firebaseClient;
