@@ -27,7 +27,6 @@ export default function ProfilePage() {
     documentNumber: '',
   });
 
-  // Subscribe to auth state and load profile
   useEffect(() => {
     const unsubscribe = onAuthChange(async (u) => {
       setUser(u);
@@ -108,12 +107,12 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-8 max-w-2xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-800 rounded w-1/3"></div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="animate-pulse space-y-4 w-full max-w-2xl">
+          <div className="h-8 bg-surface-secondary rounded w-1/3"></div>
           <div className="space-y-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-800 rounded-lg"></div>
+              <div key={i} className="h-12 bg-surface-secondary rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -123,147 +122,173 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="p-4 sm:p-8 max-w-2xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2">Profile</h1>
-          <p className="text-gray-400">Manage your account information</p>
-        </div>
-        <div className="p-6 bg-blue-900 border border-blue-700 rounded-lg text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-blue-400" />
-          <p className="text-lg font-semibold mb-2">Sign in to manage your profile</p>
-          <p className="text-sm text-blue-300">Please sign in to view and update your profile information.</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-headline text-white mb-2">Profile</h1>
+            <p className="text-subtitle text-text-secondary">Manage your account information</p>
+          </div>
+          <div className="card-base p-8 text-center border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-accent-blue" />
+            <p className="text-lg font-semibold text-white mb-2">Sign in to manage your profile</p>
+            <p className="text-sm text-text-secondary">
+              Please sign in to view and update your profile information.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-2xl">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-heading font-bold mb-2">Profile</h1>
-          <p className="text-gray-400">Manage your account information</p>
+    <div className="min-h-screen flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-2xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-headline text-white mb-2">Profile</h1>
+          <p className="text-subtitle text-text-secondary">Manage your account information</p>
         </div>
+
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg flex items-center gap-3 border animate-fadeIn ${
+              message.startsWith('✓')
+                ? 'bg-accent-green/10 text-accent-green border-accent-green/30'
+                : 'bg-accent-red/10 text-accent-red border-accent-red/30'
+            }`}
+          >
+            {message.startsWith('✓') ? (
+              <span className="text-xl">✓</span>
+            ) : (
+              <AlertCircle size={20} />
+            )}
+            {message}
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="card-base p-8 space-y-6 mb-6 border border-surface-secondary/50"
+        >
+          <div className="pb-6 border-b border-surface-secondary/50">
+            <p className="text-sm text-text-secondary font-medium mb-2">Email</p>
+            <p className="text-lg font-semibold text-white">{user.email || 'No email'}</p>
+          </div>
+
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-semibold text-white mb-3">
+              Full Name <span className="text-accent-red">*</span>
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              required
+              value={profile.fullName || ''}
+              onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+              disabled={saving}
+              placeholder="Your full name"
+              className="input-base w-full"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="age" className="block text-sm font-semibold text-white mb-3">
+              Age <span className="text-accent-red">*</span>
+            </label>
+            <input
+              id="age"
+              type="number"
+              required
+              value={profile.age || ''}
+              onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
+              disabled={saving}
+              min="18"
+              max="120"
+              placeholder="Your age (minimum 18)"
+              className="input-base w-full"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="userType" className="block text-sm font-semibold text-white mb-3">
+              User Type
+            </label>
+            <select
+              id="userType"
+              value={profile.userType || ''}
+              onChange={(e) => setProfile({ ...profile, userType: e.target.value })}
+              disabled={saving}
+              className="input-base w-full"
+            >
+              <option value="">Select type...</option>
+              <option value="Indian">Indian Citizen</option>
+              <option value="Foreigner">Foreigner</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="documentType" className="block text-sm font-semibold text-white mb-3">
+              Document Type
+            </label>
+            <select
+              id="documentType"
+              value={profile.documentType || ''}
+              onChange={(e) => setProfile({ ...profile, documentType: e.target.value })}
+              disabled={saving}
+              className="input-base w-full"
+            >
+              <option value="">Select document...</option>
+              {profile.userType === 'Indian' ? (
+                <option value="Aadhar">Aadhar Card</option>
+              ) : profile.userType === 'Foreigner' ? (
+                <>
+                  <option value="Passport">Passport</option>
+                  <option value="Visa">Visa</option>
+                </>
+              ) : null}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="documentNumber"
+              className="block text-sm font-semibold text-white mb-3"
+            >
+              Document Number
+            </label>
+            <input
+              id="documentNumber"
+              type="text"
+              value={profile.documentNumber || ''}
+              onChange={(e) => setProfile({ ...profile, documentNumber: e.target.value })}
+              disabled={saving}
+              placeholder="Your document number"
+              className="input-base w-full"
+            />
+          </div>
+
+          <div className="pt-6 border-t border-surface-secondary/50 flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              <Save size={20} />
+              {saving ? 'Saving...' : 'Save Profile'}
+            </button>
+          </div>
+        </form>
+
+        <button
+          onClick={handleSignOut}
+          className="btn-danger w-full flex items-center justify-center gap-2"
+        >
+          <LogOut size={20} />
+          Sign Out
+        </button>
       </div>
-
-      {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 border ${
-          message.startsWith('✓')
-            ? 'bg-green-900 text-green-300 border-green-700'
-            : 'bg-red-900 text-red-300 border-red-700'
-        }`}>
-          {message.startsWith('✓') ? '✓' : <AlertCircle size={20} />}
-          {message}
-        </div>
-      )}
-
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl p-6 sm:p-8 space-y-6 mb-6">
-        {/* Profile Header */}
-        <div className="pb-6 border-b border-gray-800">
-          <p className="text-sm text-gray-400 mb-2">Email</p>
-          <p className="text-lg font-medium">{user.email || 'No email'}</p>
-        </div>
-
-        {/* Full Name */}
-        <div>
-          <label className="block text-sm font-semibold mb-2">Full Name *</label>
-          <input
-            type="text"
-            required
-            value={profile.fullName || ''}
-            onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-            disabled={saving}
-            placeholder="Your full name"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          />
-        </div>
-
-        {/* Age */}
-        <div>
-          <label className="block text-sm font-semibold mb-2">Age *</label>
-          <input
-            type="number"
-            required
-            value={profile.age || ''}
-            onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
-            disabled={saving}
-            min="18"
-            max="120"
-            placeholder="Your age (minimum 18)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          />
-        </div>
-
-        {/* User Type */}
-        <div>
-          <label className="block text-sm font-semibold mb-2">User Type</label>
-          <select
-            value={profile.userType || ''}
-            onChange={(e) => setProfile({ ...profile, userType: e.target.value })}
-            disabled={saving}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          >
-            <option value="">Select type...</option>
-            <option value="Indian">Indian Citizen</option>
-            <option value="Foreigner">Foreigner</option>
-          </select>
-        </div>
-
-        {/* Document Type */}
-        <div>
-          <label className="block text-sm font-semibold mb-2">Document Type</label>
-          <select
-            value={profile.documentType || ''}
-            onChange={(e) => setProfile({ ...profile, documentType: e.target.value })}
-            disabled={saving}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          >
-            <option value="">Select document...</option>
-            {profile.userType === 'Indian' ? (
-              <option value="Aadhar">Aadhar Card</option>
-            ) : profile.userType === 'Foreigner' ? (
-              <>
-                <option value="Passport">Passport</option>
-                <option value="Visa">Visa</option>
-              </>
-            ) : null}
-          </select>
-        </div>
-
-        {/* Document Number */}
-        <div>
-          <label className="block text-sm font-semibold mb-2">Document Number</label>
-          <input
-            type="text"
-            value={profile.documentNumber || ''}
-            onChange={(e) => setProfile({ ...profile, documentNumber: e.target.value })}
-            disabled={saving}
-            placeholder="Your document number"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="pt-6 border-t border-gray-800 flex gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-700 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          >
-            <Save size={20} />
-            {saving ? 'Saving...' : 'Save Profile'}
-          </button>
-        </div>
-      </form>
-
-      {/* Sign Out */}
-      <button
-        onClick={handleSignOut}
-        className="w-full p-4 border border-red-700 bg-red-900 hover:bg-red-800 text-red-300 rounded-lg font-medium transition flex items-center justify-center gap-2"
-      >
-        <LogOut size={20} />
-        Sign Out
-      </button>
     </div>
   );
 }

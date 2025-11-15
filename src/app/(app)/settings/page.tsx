@@ -1,94 +1,51 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AlertCircle, Bell, MapPin, Lock, Eye } from 'lucide-react';
-import { onAuthChange, getSettings, saveSettings } from '@/lib/firebaseClient';
+import { useEffect, useState } from 'react';
+import { AlertCircle, Bell, Lock, Eye } from 'lucide-react';
+import { onAuthChange } from '@/lib/firebaseClient';
+
+type Settings = {
+  emailNotifications: boolean;
+  locationSharing: boolean;
+  publicProfile: boolean;
+  twoFactorAuth: boolean;
+};
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
-    notificationsEnabled: true,
-    shareLocation: true,
-    anonymousMode: false,
-    dataCollection: true,
+  const [settings, setSettings] = useState<Settings>({
+    emailNotifications: true,
+    locationSharing: true,
+    publicProfile: false,
+    twoFactorAuth: false,
   });
 
-  // Subscribe to auth state and load settings
   useEffect(() => {
-    const unsubscribe = onAuthChange(async (u) => {
+    const unsubscribe = onAuthChange((u) => {
       setUser(u);
-      if (u) {
-        try {
-          const userSettings = await getSettings(u.uid);
-          if (userSettings) {
-            setSettings((prev) => ({ ...prev, ...userSettings }));
-          }
-        } catch (err) {
-          console.error('[Settings] Error loading settings:', err);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     });
     return () => {
       if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
     };
   }, []);
 
-  const handleToggle = async (key: string) => {
-    if (!user) {
-      setMessage('Please sign in to modify settings.');
-      return;
-    }
-
-    const newSettings = {
-      ...settings,
-      [key]: !settings[key as keyof typeof settings],
-    };
-
-    setSettings(newSettings);
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      const success = await saveSettings(user.uid, newSettings);
-      if (success) {
-        setMessage(`✓ ${key.replace(/([A-Z])/g, ' $1').trim()} updated successfully!`);
-        setTimeout(() => setMessage(null), 3000);
-      } else {
-        setMessage('Failed to update settings. Please try again.');
-        // Revert change on failure
-        setSettings((prev) => ({
-          ...prev,
-          [key]: !prev[key as keyof typeof prev],
-        }));
-      }
-    } catch (error: any) {
-      console.error('[Settings] Error:', error);
-      setMessage(`Error: ${error.message}`);
-      // Revert change on error
-      setSettings((prev) => ({
-        ...prev,
-        [key]: !prev[key as keyof typeof prev],
-      }));
-    } finally {
-      setSaving(false);
-    }
+  const handleToggle = (key: keyof Settings) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-8 max-w-2xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-800 rounded w-1/3"></div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="animate-pulse space-y-4 w-full max-w-2xl">
+          <div className="h-8 bg-surface-secondary rounded w-1/3"></div>
           <div className="space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-800 rounded-lg"></div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-surface-secondary rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -96,107 +53,131 @@ export default function SettingsPage() {
     );
   }
 
-  const settingsOptions = [
-    {
-      key: 'notificationsEnabled',
-      title: 'Push Notifications',
-      description: 'Receive alerts about incidents, check-ins, and safety updates',
-      icon: Bell,
-      color: 'text-blue-400',
-    },
-    {
-      key: 'shareLocation',
-      title: 'Share Location Data',
-      description: 'Allow us to track your location for safety check-ins',
-      icon: MapPin,
-      color: 'text-green-400',
-    },
-    {
-      key: 'anonymousMode',
-      title: 'Anonymous Mode',
-      description: 'Hide your name and profile picture from other users',
-      icon: Eye,
-      color: 'text-purple-400',
-    },
-    {
-      key: 'dataCollection',
-      title: 'Analytics & Data Collection',
-      description: 'Allow us to collect usage data to improve the app',
-      icon: Lock,
-      color: 'text-orange-400',
-    },
-  ];
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-headline text-white mb-2">Settings</h1>
+            <p className="text-subtitle text-text-secondary">Manage your preferences</p>
+          </div>
+          <div className="card-base p-8 text-center border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-accent-blue" />
+            <p className="text-lg font-semibold text-white mb-2">Sign in to manage settings</p>
+            <p className="text-sm text-text-secondary">
+              Please sign in to access your settings.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 sm:p-8 max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-heading font-bold mb-2">Settings</h1>
-        <p className="text-gray-400">Manage your preferences and privacy settings</p>
-      </div>
-
-      {!user && (
-        <div className="mb-6 p-4 bg-blue-900 border border-blue-700 rounded-lg flex items-center gap-3">
-          <AlertCircle size={20} className="text-blue-400" />
-          <div>
-            <div className="font-bold">Sign in Required</div>
-            <div className="text-sm text-blue-300">Please sign in to manage your settings</div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-2xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-headline text-white mb-2">Settings</h1>
+          <p className="text-subtitle text-text-secondary">Manage your preferences</p>
         </div>
-      )}
 
-      {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 border ${
-          message.startsWith('✓')
-            ? 'bg-green-900 text-green-300 border-green-700'
-            : 'bg-red-900 text-red-300 border-red-700'
-        }`}>
-          {message.startsWith('✓') ? '✓' : <AlertCircle size={20} />}
-          {message}
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {settingsOptions.map(({ key, title, description, icon: Icon, color }) => (
-          <div
-            key={key}
-            className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl p-6 flex items-center justify-between hover:border-gray-700 transition"
-          >
-            <div className="flex items-start gap-4">
-              <Icon size={24} className={color} />
-              <div>
-                <h3 className="font-semibold text-lg mb-1">{title}</h3>
-                <p className="text-sm text-gray-400">{description}</p>
+        <div className="space-y-4">
+          <div className="card-base p-6 border border-surface-secondary/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bell size={20} className="text-accent-blue" />
+                <div>
+                  <h3 className="font-semibold text-white">Email Notifications</h3>
+                  <p className="text-sm text-text-secondary">Receive updates via email</p>
+                </div>
               </div>
-            </div>
-
-            <button
-              onClick={() => handleToggle(key)}
-              disabled={saving || !user}
-              className={`relative w-14 h-8 rounded-full transition-all ${
-                settings[key as keyof typeof settings]
-                  ? 'bg-blue-600'
-                  : 'bg-gray-700'
-              } ${saving || !user ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <div
-                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
-                  settings[key as keyof typeof settings] ? 'translate-x-6' : ''
+              <button
+                onClick={() => handleToggle('emailNotifications')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  settings.emailNotifications
+                    ? 'bg-accent-green/20 text-accent-green'
+                    : 'bg-surface-secondary text-text-secondary'
                 }`}
-              />
-            </button>
+              >
+                {settings.emailNotifications ? 'On' : 'Off'}
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-8 p-6 bg-gray-950 border border-gray-800 rounded-xl">
-        <h3 className="font-semibold text-lg mb-4">Privacy Policy</h3>
-        <p className="text-sm text-gray-400 leading-relaxed">
-          Your privacy is important to us. We only collect data necessary to provide safety features and improve your experience.
-          All location data is encrypted and stored securely. You can disable data collection at any time in these settings.
-        </p>
-        <a href="#" className="text-blue-400 hover:text-blue-300 text-sm mt-4 inline-block transition">
-          Read our full privacy policy →
-        </a>
+          <div className="card-base p-6 border border-surface-secondary/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Eye size={20} className="text-accent-purple" />
+                <div>
+                  <h3 className="font-semibold text-white">Location Sharing</h3>
+                  <p className="text-sm text-text-secondary">Share location with authorities</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggle('locationSharing')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  settings.locationSharing
+                    ? 'bg-accent-green/20 text-accent-green'
+                    : 'bg-surface-secondary text-text-secondary'
+                }`}
+              >
+                {settings.locationSharing ? 'On' : 'Off'}
+              </button>
+            </div>
+          </div>
+
+          <div className="card-base p-6 border border-surface-secondary/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Eye size={20} className="text-accent-orange" />
+                <div>
+                  <h3 className="font-semibold text-white">Public Profile</h3>
+                  <p className="text-sm text-text-secondary">Make your profile visible</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggle('publicProfile')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  settings.publicProfile
+                    ? 'bg-accent-green/20 text-accent-green'
+                    : 'bg-surface-secondary text-text-secondary'
+                }`}
+              >
+                {settings.publicProfile ? 'On' : 'Off'}
+              </button>
+            </div>
+          </div>
+
+          <div className="card-base p-6 border border-surface-secondary/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Lock size={20} className="text-accent-red" />
+                <div>
+                  <h3 className="font-semibold text-white">Two-Factor Authentication</h3>
+                  <p className="text-sm text-text-secondary">Extra security for your account</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggle('twoFactorAuth')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  settings.twoFactorAuth
+                    ? 'bg-accent-green/20 text-accent-green'
+                    : 'bg-surface-secondary text-text-secondary'
+                }`}
+              >
+                {settings.twoFactorAuth ? 'On' : 'Off'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 card-base p-6 border border-surface-secondary/50">
+          <h2 className="text-lg font-semibold text-white mb-3">Account Info</h2>
+          <div className="space-y-2 text-sm">
+            <p className="text-text-secondary">Email: <span className="text-white">{user.email}</span></p>
+            <p className="text-text-secondary">User ID: <span className="text-white font-mono text-xs">{user.uid}</span></p>
+          </div>
+        </div>
       </div>
     </div>
   );

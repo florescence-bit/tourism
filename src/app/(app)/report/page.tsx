@@ -1,202 +1,181 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { AlertCircle, MapPin, FileText, Send } from 'lucide-react';
-import { saveReport, listReports, onAuthChange } from '@/lib/firebaseClient';
+import { useEffect, useState } from 'react';
+import { AlertCircle, Send, MapPin } from 'lucide-react';
+import { onAuthChange, saveReport } from '@/lib/firebaseClient';
 
-export default function Report() {
+export default function ReportPage() {
   const [user, setUser] = useState<any>(null);
-  const [formData, setFormData] = useState({ type: '', description: '', location: '' });
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [reports, setReports] = useState<Array<any>>([]);
+  const [reportData, setReportData] = useState({
+    incidentType: 'safety',
+    description: '',
+    location: '',
+  });
 
-  // Subscribe to auth state
   useEffect(() => {
     const unsubscribe = onAuthChange((u) => {
       setUser(u);
-      if (u) {
-        loadReports(u.uid);
-      }
+      setLoading(false);
     });
     return () => {
       if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
     };
   }, []);
 
-  // Load user's reports
-  const loadReports = async (uid: string) => {
-    try {
-      const userReports = await listReports(uid);
-      setReports(userReports);
-    } catch (err) {
-      console.error('[Report] Error loading reports:', err);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!user) {
-      setMessage('Please sign in to submit reports.');
+      setMessage('Please sign in to submit a report');
       return;
     }
 
-    if (!formData.type || !formData.description || !formData.location) {
-      setMessage('Please fill in all required fields.');
+    if (!reportData.incidentType || !reportData.description || !reportData.location) {
+      setMessage('Please fill in all required fields');
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     setMessage(null);
 
     try {
-      const reportId = await saveReport(user.uid, {
-        incidentType: formData.type,
-        description: formData.description,
-        location: formData.location,
-      });
-
-      if (reportId) {
-        setMessage('✓ Report submitted successfully!');
-        setFormData({ type: '', description: '', location: '' });
-        setSubmitted(true);
-        await loadReports(user.uid);
-        setTimeout(() => setSubmitted(false), 3000);
-      } else {
-        setMessage('Failed to submit report. Please try again.');
-      }
+      await saveReport(user.uid, reportData);
+      setMessage('✓ Report submitted successfully!');
+      setReportData({ incidentType: 'safety', description: '', location: '' });
+      setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
       console.error('[Report] Error:', error);
       setMessage(`Error: ${error.message}`);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <div className="p-4 sm:p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-heading font-bold mb-2">Report Incident</h1>
-        <p className="text-gray-400">Help us keep the travel community safe. Report any suspicious activity or incidents.</p>
-      </div>
-
-      {submitted && (
-        <div className="mb-6 p-4 bg-green-900 border border-green-700 rounded-lg flex items-center gap-3">
-          <span className="text-green-400">✓</span>
-          <div>
-            <div className="font-bold text-green-300">Report Submitted</div>
-            <div className="text-sm text-green-300 opacity-75">Thank you! Our team will review your report.</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="animate-pulse space-y-4 w-full max-w-2xl">
+          <div className="h-8 bg-surface-secondary rounded w-1/3"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-surface-secondary rounded-lg"></div>
+            ))}
           </div>
         </div>
-      )}
-      
-      <form onSubmit={handleSubmit} className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl p-6 sm:p-8 space-y-6 mb-8">
-        {/* Incident Type */}
-        <div>
-          <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
-            <AlertCircle size={18} className="text-orange-400" />
-            Incident Type
-          </label>
-          <select 
-            required
-            value={formData.type}
-            onChange={(e) => setFormData({...formData, type: e.target.value})}
-            disabled={loading || !user}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          >
-            <option value="">Select type...</option>
-            <option value="suspicious">Suspicious Activity</option>
-            <option value="theft">Theft/Robbery</option>
-            <option value="harassment">Harassment</option>
-            <option value="lost">Lost Item</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
+      </div>
+    );
+  }
 
-        {/* Location */}
-        <div>
-          <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
-            <MapPin size={18} className="text-blue-400" />
-            Location
-          </label>
-          <input 
-            type="text"
-            required
-            value={formData.location}
-            onChange={(e) => setFormData({...formData, location: e.target.value})}
-            disabled={loading || !user}
-            placeholder="Where did this happen?"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 hover:border-gray-600 focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
-          />
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-headline text-white mb-2">Report</h1>
+            <p className="text-subtitle text-text-secondary">File a safety report</p>
+          </div>
+          <div className="card-base p-8 text-center border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-accent-blue" />
+            <p className="text-lg font-semibold text-white mb-2">Sign in to file a report</p>
+            <p className="text-sm text-text-secondary">
+              Please sign in to submit safety reports.
+            </p>
+          </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
-            <FileText size={18} className="text-purple-400" />
-            Description
-          </label>
-          <textarea 
-            required
-            value={formData.description}
-            onChange={(e) => setFormData({...formData, description: e.target.value.slice(0, 500)})}
-            disabled={loading || !user}
-            placeholder="Describe what happened... (Please include any details that might be helpful)"
-            rows={6}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white placeholder-gray-500 hover:border-gray-600 focus:border-blue-500 focus:outline-none transition resize-none disabled:opacity-50"
-          />
-          <p className="text-xs text-gray-500 mt-2">{formData.description.length}/500 characters</p>
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-2xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-headline text-white mb-2">Report</h1>
+          <p className="text-subtitle text-text-secondary">File a safety report</p>
         </div>
 
         {message && (
-          <div className={`p-3 rounded-lg flex items-center gap-2 ${
-            message.startsWith('✓') 
-              ? 'bg-green-900 text-green-300 border border-green-700' 
-              : 'bg-red-900 text-red-300 border border-red-700'
-          }`}>
-            {message.startsWith('✓') ? '✓' : <AlertCircle size={20} />}
+          <div
+            className={`mb-6 p-4 rounded-lg flex items-center gap-3 border animate-fadeIn ${
+              message.startsWith('✓')
+                ? 'bg-accent-green/10 text-accent-green border-accent-green/30'
+                : 'bg-accent-red/10 text-accent-red border-accent-red/30'
+            }`}
+          >
+            {message.startsWith('✓') ? (
+              <span className="text-xl">✓</span>
+            ) : (
+              <AlertCircle size={20} />
+            )}
             {message}
           </div>
         )}
 
-        {/* Submit Button */}
-        <button 
-          type="submit"
-          disabled={loading || !user}
-          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-700 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-        >
-          <Send size={20} />
-          {!user ? 'Sign in to report' : loading ? 'Submitting...' : 'Submit Report'}
-        </button>
-
-        {/* Disclaimer */}
-        <div className="p-4 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-400">
-          <strong>Note:</strong> All reports are reviewed by our safety team. Providing accurate information helps us better protect the community.
-        </div>
-      </form>
-
-      {/* Recent Reports */}
-      {user && reports.length > 0 && (
-        <div className="bg-gray-950 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-xl font-semibold mb-4">Your Recent Reports</h3>
-          <div className="space-y-3">
-            {reports.slice(0, 5).map((report) => (
-              <div key={report.id} className="p-4 bg-gray-900 rounded-lg border border-gray-800">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-medium capitalize">{report.incidentType}</p>
-                    <p className="text-sm text-gray-400">{report.location}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300">{report.status}</span>
-                </div>
-                <p className="text-sm text-gray-500">{new Date(report.createdAt).toLocaleString()}</p>
-              </div>
-            ))}
+        <form onSubmit={handleSubmit} className="card-base p-8 space-y-6 border border-surface-secondary/50">
+          <div>
+            <label htmlFor="incidentType" className="block text-sm font-semibold text-white mb-3">
+              Incident Type <span className="text-accent-red">*</span>
+            </label>
+            <select
+              id="incidentType"
+              value={reportData.incidentType}
+              onChange={(e) => setReportData({ ...reportData, incidentType: e.target.value })}
+              disabled={submitting}
+              className="input-base w-full"
+            >
+              <option value="safety">Safety</option>
+              <option value="crime">Crime</option>
+              <option value="accident">Accident</option>
+              <option value="hazard">Hazard</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          <div>
+            <label htmlFor="location" className="block text-sm font-semibold text-white mb-3">
+              Location <span className="text-accent-red">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="location"
+                type="text"
+                required
+                value={reportData.location}
+                onChange={(e) => setReportData({ ...reportData, location: e.target.value })}
+                disabled={submitting}
+                placeholder="Location of incident"
+                className="input-base w-full"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="description" className="block text-sm font-semibold text-white mb-3">
+              Description <span className="text-accent-red">*</span>
+            </label>
+            <textarea
+              id="description"
+              required
+              value={reportData.description}
+              onChange={(e) => setReportData({ ...reportData, description: e.target.value })}
+              disabled={submitting}
+              placeholder="Detailed description of the incident"
+              rows={5}
+              className="input-base w-full resize-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <Send size={20} />
+            {submitting ? 'Submitting...' : 'Submit Report'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

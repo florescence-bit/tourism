@@ -7,7 +7,7 @@ import { saveCheckIn, listCheckIns, onAuthChange } from '@/lib/firebaseClient';
 import GeofenceManager from '../../../components/geofence/GeofenceManager';
 
 const SimpleMap = dynamic<any>(() => import('@/components/map/SimpleMap'), { 
-  loading: () => <div className="rounded-3xl bg-gray-900 h-96 animate-pulse" />,
+  loading: () => <div className="rounded-3xl bg-surface-secondary h-96 animate-pulse" />,
   ssr: false 
 });
 const AnySimpleMap = SimpleMap as any;
@@ -17,10 +17,20 @@ export default function CheckIn() {
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [position, setPosition] = useState<{ lat: number; lon: number; accuracy?: number; updatedAt?: number; place?: string } | null>(null);
-  const [history, setHistory] = useState<Array<{ id: string; location: string; time: string; coords: string }>>([]);
+  const [position, setPosition] = useState<{
+    lat: number;
+    lon: number;
+    accuracy?: number;
+    updatedAt?: number;
+    place?: string;
+  } | null>(null);
+  const [history, setHistory] = useState<Array<{
+    id: string;
+    location: string;
+    time: string;
+    coords: string;
+  }>>([]);
 
-  // Subscribe to auth state
   useEffect(() => {
     const unsubscribe = onAuthChange((u) => {
       setUser(u);
@@ -33,7 +43,6 @@ export default function CheckIn() {
     };
   }, []);
 
-  // Load check-in history from Firestore
   const loadCheckInHistory = async (uid: string) => {
     try {
       const checkIns = await listCheckIns(uid);
@@ -49,7 +58,6 @@ export default function CheckIn() {
     }
   };
 
-  // Start watching the user's geolocation
   useEffect(() => {
     if (!('geolocation' in navigator)) return;
 
@@ -59,7 +67,6 @@ export default function CheckIn() {
       const accuracy = pos.coords.accuracy;
       const updatedAt = pos.timestamp;
 
-      // Try reverse geocoding via Geoapify (if available)
       let place: string | undefined = undefined;
       try {
         const key = process.env.NEXT_PUBLIC_GEOAPIFY_KEY || '';
@@ -94,7 +101,6 @@ export default function CheckIn() {
     return () => navigator.geolocation.clearWatch(watcher);
   }, []);
 
-  // Handle check-in submission
   async function onCheckIn() {
     if (!position) {
       setMessage('Current position not available yet. Please enable location services.');
@@ -102,7 +108,7 @@ export default function CheckIn() {
     }
 
     if (!user) {
-      setMessage('Please sign in to save check-ins.');
+      setMessage('Please sign in to check in');
       return;
     }
 
@@ -110,141 +116,156 @@ export default function CheckIn() {
     setMessage(null);
 
     try {
-      const checkInId = await saveCheckIn(user.uid, {
-        location: position.place || `${position.lat.toFixed(5)}, ${position.lon.toFixed(5)}`,
+      await saveCheckIn(user.uid, {
+      location: position.place || 'Unknown location',
         latitude: position.lat,
         longitude: position.lon,
-        accuracy: position.accuracy,
-        place: position.place,
+        accuracy: position.accuracy || 0,
+        place: position.place || 'Unknown location',
       });
 
-      if (checkInId) {
-        setMessage('✓ Check-in saved successfully!');
-        setCheckedIn(true);
-        
-        // Reload history
-        await loadCheckInHistory(user.uid);
+      setMessage('✓ Checked in successfully!');
+      setCheckedIn(true);
 
-        setTimeout(() => setCheckedIn(false), 2000);
-      } else {
-        setMessage('Failed to save check-in. Please try again.');
-      }
-    } catch (error: any) {
-      console.error('[CheckIn] Error:', error);
-      setMessage(`Error: ${error.message}`);
+      setTimeout(() => {
+        setMessage(null);
+        setCheckedIn(false);
+      }, 3000);
+
+      loadCheckInHistory(user.uid);
+    } catch (err: any) {
+      console.error('[CheckIn] Error:', err);
+      setMessage(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <div className="p-4 sm:p-8 max-w-6xl">
-      <div className="mb-12">
-        <h1 className="text-5xl font-bold mb-3">Check-In</h1>
-        <p className="text-gray-500 text-lg">Share your location with trusted contacts</p>
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <div className="mb-8 text-center">
+            <h1 className="text-headline text-white mb-2">Check In</h1>
+            <p className="text-subtitle text-text-secondary">Share your location for safety</p>
+          </div>
+          <div className="card-base p-8 text-center border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-accent-blue" />
+            <p className="text-lg font-semibold text-white mb-2">Sign in to check in</p>
+            <p className="text-sm text-text-secondary">
+              Please sign in to share your location and check in at safe zones.
+            </p>
+          </div>
+        </div>
       </div>
-      
-      {/* Main Check-In Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Check-In Card */}
-        <div className="lg:col-span-2 bg-gray-950 rounded-3xl p-8 border border-gray-800">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-gray-800 rounded-2xl">
-              <MapPin size={32} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold">Current Location</h2>
-              <p className="text-gray-500">{position ? position.place || `${position.lat.toFixed(4)}°, ${position.lon.toFixed(4)}°` : 'Detecting...'}</p>
-            </div>
-          </div>
+    );
+  }
 
-          <div className="mb-6">
-            <AnySimpleMap latitude={position?.lat ?? 27.1751} longitude={position?.lon ?? 78.0421} />
-          </div>
+  return (
+    <div className="min-h-screen flex flex-col p-4 py-8">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="mb-8 text-center">
+          <h1 className="text-headline text-white mb-2">Check In</h1>
+          <p className="text-subtitle text-text-secondary">Share your location for safety</p>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
-              <div className="text-sm text-gray-500 mb-1">Latitude</div>
-              <div className="font-semibold">{position ? `${position.lat.toFixed(5)}°` : '—'}</div>
-            </div>
-            <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
-              <div className="text-sm text-gray-500 mb-1">Longitude</div>
-              <div className="font-semibold">{position ? `${position.lon.toFixed(5)}°` : '—'}</div>
-            </div>
-          </div>
-
-          {message && (
-            <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-              message.startsWith('✓') 
-                ? 'bg-green-900 text-green-300 border border-green-700' 
-                : 'bg-red-900 text-red-300 border border-red-700'
-            }`}>
-              {message.startsWith('✓') ? '✓' : <AlertCircle size={20} />}
-              {message}
-            </div>
-          )}
-
-          <button 
-            onClick={onCheckIn}
-            disabled={loading || !user}
-            className={`w-full py-4 rounded-2xl font-semibold text-lg transition-all ${
-              checkedIn
-                ? 'bg-gray-800 text-green-400 border border-gray-700' 
-                : loading || !user
-                  ? 'bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-700'
-                  : 'bg-white text-black hover:bg-gray-100'
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg flex items-center gap-3 border animate-fadeIn ${
+              message.startsWith('✓')
+                ? 'bg-accent-green/10 text-accent-green border-accent-green/30'
+                : 'bg-accent-red/10 text-accent-red border-accent-red/30'
             }`}
           >
-            {!user ? 'Sign in to check in' : loading ? 'Saving...' : checkedIn ? '✓ Checked In' : 'Check In Now'}
-          </button>
-        </div>
+            {message.startsWith('✓') ? (
+              <span className="text-xl">✓</span>
+            ) : (
+              <AlertCircle size={20} />
+            )}
+            {message}
+          </div>
+        )}
 
-        {/* Quick Actions */}
-        <div className="space-y-4">
-          <div className="bg-gray-950 rounded-3xl p-6 border border-gray-800">
-            <div className="flex items-center gap-3 mb-4">
-              <Navigation size={24} className="text-white" />
-              <h3 className="font-semibold">GPS Active</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <div className="card-base p-6 border border-surface-secondary/50 h-full">
+              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <MapPin size={20} className="text-accent-blue" />
+                Your Location
+              </h2>
+              <AnySimpleMap />
             </div>
-            <p className="text-sm text-gray-500">{position ? 'Tracking enabled' : 'Waiting for GPS...'}</p>
           </div>
 
-          <div className="bg-gray-950 rounded-3xl p-6 border border-gray-800">
-            <div className="flex items-center gap-3 mb-4">
-              <Clock size={24} className="text-white" />
-              <h3 className="font-semibold">Last Update</h3>
-            </div>
-            <p className="text-sm text-gray-500">{position ? new Date(position.updatedAt || Date.now()).toLocaleTimeString() : 'Never'}</p>
-          </div>
-
-          <div className="bg-gray-950 rounded-3xl p-6 border border-gray-800">
-            <div className="flex items-center gap-3 mb-4">
-              <Map size={24} className="text-white" />
-              <h3 className="font-semibold">Accuracy</h3>
-            </div>
-            <p className="text-sm text-gray-500">{position ? `±${Math.round(position.accuracy || 0)} meters` : '—'}</p>
-          </div>
-          
-          <GeofenceManager />
-        </div>
-      </div>
-
-      {/* Check-In History */}
-      <div className="bg-gray-950 rounded-3xl p-8 border border-gray-800">
-        <h3 className="text-2xl font-semibold mb-6">History</h3>
-        <div className="space-y-3">
-          {history.length === 0 ? (
-            <p className="text-gray-500">No check-ins yet. {user ? 'Check in now to get started!' : 'Sign in to save check-ins.'}</p>
-          ) : (
-            history.map((item) => (
-              <div key={item.id} className="p-4 bg-gray-900 rounded-2xl border border-gray-800 hover:border-gray-700 transition">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="font-semibold">{item.location}</div>
-                  <span className="text-xs text-gray-500">{item.time}</span>
+          <div className="card-base p-6 border border-surface-secondary/50">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Navigation size={20} className="text-accent-green" />
+              Position
+            </h2>
+            {position ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-text-secondary mb-1">Latitude</p>
+                  <p className="text-white font-mono">{position.lat.toFixed(6)}</p>
                 </div>
-                <div className="text-sm text-gray-500">{item.coords}</div>
+                <div>
+                  <p className="text-sm text-text-secondary mb-1">Longitude</p>
+                  <p className="text-white font-mono">{position.lon.toFixed(6)}</p>
+                </div>
+                {position.accuracy && (
+                  <div>
+                    <p className="text-sm text-text-secondary mb-1">Accuracy</p>
+                    <p className="text-white font-mono">{position.accuracy.toFixed(1)}m</p>
+                  </div>
+                )}
+                {position.place && (
+                  <div>
+                    <p className="text-sm text-text-secondary mb-1">Place</p>
+                    <p className="text-white text-sm break-words">{position.place}</p>
+                  </div>
+                )}
+                <button
+                  onClick={onCheckIn}
+                  disabled={loading}
+                  className="btn-primary w-full mt-4 flex items-center justify-center gap-2"
+                >
+                  <MapPin size={20} />
+                  {loading ? 'Checking In...' : 'Check In Now'}
+                </button>
               </div>
-            ))
+            ) : (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 text-text-secondary/50" />
+                <p className="text-sm text-text-secondary">Waiting for location...</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <GeofenceManager />
+
+        <div className="card-base p-6 border border-surface-secondary/50">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock size={20} className="text-accent-orange" />
+            Check In History
+          </h2>
+          {history.length > 0 ? (
+            <div className="space-y-3">
+              {history.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-lg border border-surface-secondary/50 hover:border-accent-blue/30 transition"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-white font-semibold">{item.location}</p>
+                    <span className="text-xs text-text-secondary">{item.time}</span>
+                  </div>
+                  <p className="text-sm text-text-secondary font-mono">{item.coords}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-text-secondary text-center py-8">No check-ins yet</p>
           )}
         </div>
       </div>
