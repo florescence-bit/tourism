@@ -466,6 +466,15 @@ export async function saveNotification(uid: string, payload: Record<string, any>
  * @param name - Display name or full name to base the digital id on (optional)
  * @returns Object containing digitalId and qrDataUrl on success, or null on failure
  */
+/**
+ * Generates a human-friendly digital ID using the user's name and stores it
+ * together with a generated QR code (data URL) in Firestore under
+ * `/users/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
+ *
+ * @param uid - User's UID
+ * @param name - Display name or full name to base the digital id on (optional)
+ * @returns Object containing digitalId and qrDataUrl on success, or null on failure
+ */
 export async function generateAndSaveDigitalId(uid: string, name?: string): Promise<{ digitalId: string; qrDataUrl: string } | null> {
   console.log('[Firebase] generateAndSaveDigitalId called with uid:', uid, 'name:', name);
   
@@ -480,21 +489,23 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
   }
 
   try {
-    // Step 1: Generate digital ID
-    console.log('[Firebase] Step 1: Generating digital ID');
+    // Normalize the name
     const normalized = (name || '').trim() || uid;
+    console.log('[Firebase] Normalized name:', normalized);
+    
+    // Generate initials
     const initials = normalized
       .split(/\s+/)
       .map((s) => (s && s[0] ? s[0].toUpperCase() : ''))
       .join('')
       .slice(0, 4) || 'ID';
+    
+    // Generate timestamp and random parts for uniqueness
     const timestamp = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
     const digitalId = `${initials}-${timestamp}-${rand}`;
-    console.log('[Firebase] Digital ID generated:', digitalId);
+    console.log('[Firebase] Generated digitalId:', digitalId);
 
-    // Step 2: Create payload
-    console.log('[Firebase] Step 2: Creating payload');
     const payload = {
       uid,
       name: normalized,
@@ -502,44 +513,56 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
       createdAt: Date.now(),
     };
 
+    // Create payload for QR code
     const qrPayload = { uid, digitalId, name: normalized };
-    console.log('[Firebase] QR payload created:', qrPayload);
+    console.log('[Firebase] Generating QR code with payload:', qrPayload);
+    
+    // Generate QR code as data URL (PNG)
+    let qrDataUrl: string;
+    try {
+      qrDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), { 
+        margin: 1, 
+        width: 300
+      });
+      console.log('[Firebase] QR code generated successfully, length:', qrDataUrl.length);
+    } catch (qrError: any) {
+      console.error('[Firebase] QR code generation failed:', qrError.message);
+      throw new Error(`QR code generation failed: ${qrError.message}`);
+    }
 
-    // Step 3: Generate QR code
-    console.log('[Firebase] Step 3: Generating QR code');
-    const qrDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), { 
-      margin: 1, 
-      width: 300
-    });
-    console.log('[Firebase] QR code generated successfully, length:', qrDataUrl.length);
+    // Save digital ID to subcollection
+    console.log('[Firebase] Saving digital ID to /users/' + uid + '/digitalIds/' + digitalId);
+    try {
+      await setDoc(doc(db, 'users', uid, 'digitalIds', digitalId), { 
+        ...payload, 
+        qrDataUrl,
+        updatedAt: Date.now()
+      });
+      console.log('[Firebase] Digital ID saved to subcollection');
+    } catch (saveError: any) {
+      console.error('[Firebase] Failed to save to subcollection:', saveError.message);
+      throw new Error(`Failed to save digital ID: ${saveError.message}`);
+    }
 
-    // Step 4: Save to subcollection
-    console.log('[Firebase] Step 4: Saving to /users/' + uid + '/digitalIds/' + digitalId);
-    await setDoc(doc(db, 'users', uid, 'digitalIds', digitalId), { 
-      ...payload, 
-      qrDataUrl,
-      updatedAt: Date.now()
-    });
-    console.log('[Firebase] Subcollection document saved successfully');
+    // Merge digital ID info into user profile
+    console.log('[Firebase] Merging digital ID into user profile');
+    try {
+      await setDoc(doc(db, 'users', uid), { 
+        digitalId, 
+        qrDataUrl,
+        updatedAt: Date.now()
+      }, { merge: true });
+      console.log('[Firebase] Digital ID merged into user profile');
+    } catch (mergeError: any) {
+      console.error('[Firebase] Failed to merge into profile:', mergeError.message);
+      throw new Error(`Failed to update profile: ${mergeError.message}`);
+    }
 
-    // Step 5: Merge into user profile
-    console.log('[Firebase] Step 5: Merging into user profile at /users/' + uid);
-    await setDoc(doc(db, 'users', uid), { 
-      digitalId, 
-      qrDataUrl,
-      updatedAt: Date.now()
-    }, { merge: true });
-    console.log('[Firebase] User profile updated with digital ID');
-
-    console.log('[Firebase] Digital ID generation completed successfully');
+    console.log('[Firebase] Digital ID generated and saved successfully');
     return { digitalId, qrDataUrl };
   } catch (error: any) {
-    console.error('[Firebase] generateAndSaveDigitalId error:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-      fullError: error
-    });
+    console.error('[Firebase] generateAndSaveDigitalId error:', error.message || error);
+    console.error('[Firebase] Error stack:', error.stack);
     return null;
   }
 }

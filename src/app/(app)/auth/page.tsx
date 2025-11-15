@@ -385,17 +385,23 @@ export default function AuthPage() {
 
     try {
       const displayName = user.displayName || user.email || user.uid;
+      console.log('[Auth] Generating digital ID with name:', displayName);
+      
       const result = await generateAndSaveDigitalId(user.uid, displayName);
-      if (result) {
+      if (result && result.qrDataUrl) {
+        console.log('[Auth] Digital ID generated successfully');
         setGeneratedId(result.digitalId);
         setQrDataUrl(result.qrDataUrl);
-        setMessage('Digital ID generated and saved successfully.');
+        setMessage('✓ Digital ID generated and saved successfully!');
+        setTimeout(() => setMessage(null), 3000);
       } else {
-        setMessage('Failed to generate Digital ID.');
+        console.error('[Auth] generateAndSaveDigitalId returned null or incomplete data');
+        setMessage('Failed to generate Digital ID - check console for details');
       }
     } catch (error: any) {
       console.error('[Auth] generate digital id error:', error);
-      setMessage('An error occurred while generating the Digital ID.');
+      const errorMsg = error?.message || error?.toString() || 'Unknown error';
+      setMessage(`Error generating Digital ID: ${errorMsg}`);
     } finally {
       setGeneratingId(false);
     }

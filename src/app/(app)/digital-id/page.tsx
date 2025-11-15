@@ -39,8 +39,13 @@ export default function DigitalID() {
   }, []);
 
   const handleGenerateID = async () => {
-    if (!user || !profile?.fullName) {
-      setMessage('Please complete your profile first');
+    if (!user) {
+      setMessage('Please sign in first');
+      return;
+    }
+
+    if (!profile?.fullName) {
+      setMessage('Please complete your profile first (Full Name required)');
       return;
     }
 
@@ -48,24 +53,22 @@ export default function DigitalID() {
     setMessage(null);
 
     try {
-      console.log('[Digital ID] Starting generation for user:', user.uid);
-      console.log('[Digital ID] Profile name:', profile.fullName);
-      
+      console.log('[Digital ID] Generating ID for user:', user.uid, 'with name:', profile.fullName);
       const result = await generateAndSaveDigitalId(user.uid, profile.fullName);
-      console.log('[Digital ID] Generation result:', result);
       
       if (result && result.qrDataUrl) {
-        console.log('[Digital ID] QR code generated, updating state');
+        console.log('[Digital ID] Successfully generated, updating UI');
         setQrCode(result.qrDataUrl);
         setMessage('✓ Digital ID generated successfully!');
         setTimeout(() => setMessage(null), 3000);
       } else {
-        console.error('[Digital ID] No QR data URL in result');
-        setMessage('Failed to generate Digital ID. Check console for details.');
+        console.error('[Digital ID] Generation returned null or no QR data');
+        setMessage('Error: Failed to generate QR code');
       }
     } catch (err: any) {
-      console.error('[Digital ID] Error:', err);
-      setMessage(`Error: ${err.message}`);
+      console.error('[Digital ID] Error details:', err);
+      const errorMsg = err?.message || err?.toString() || 'Unknown error';
+      setMessage(`Error: ${errorMsg}`);
     } finally {
       setGenerating(false);
     }
