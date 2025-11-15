@@ -23,6 +23,7 @@ import {
   sendVerificationEmail,
   signInWithGoogle,
   signInWithGithub,
+  generateAndSaveDigitalId,
 } from '@/lib/firebaseClient';
 import { formatErrorForDisplay, extractFirebaseErrorCode } from '@/lib/errorMap';
 import { MIN_PASSWORD_LENGTH, EMAIL_REGEX } from '@/lib/constants';
@@ -101,6 +102,13 @@ export default function AuthPage() {
 
   /** Current authenticated Firebase User or null */
   const [user, setUser] = useState<any>(null);
+
+  /** Generated digital ID (if created) */
+  const [generatedId, setGeneratedId] = useState<string | null>(null);
+  /** QR code data URL representing the digital ID */
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  /** True while the digital ID is being generated */
+  const [generatingId, setGeneratingId] = useState(false);
 
   const router = useRouter();
 
@@ -305,6 +313,40 @@ export default function AuthPage() {
   }
 
   // =========================================================================
+  // RENDER HELPERS
+  // =========================================================================
+
+  /**
+   * Generate a digital ID for the signed-in user, create a QR code and save to Firestore
+   */
+  async function handleGenerateDigitalId(): Promise<void> {
+    if (!user) {
+      setMessage('Please sign in before generating a Digital ID.');
+      return;
+    }
+
+    setGeneratingId(true);
+    setMessage(null);
+
+    try {
+      const displayName = user.displayName || user.email || user.uid;
+      const result = await generateAndSaveDigitalId(user.uid, displayName);
+      if (result) {
+        setGeneratedId(result.digitalId);
+        setQrDataUrl(result.qrDataUrl);
+        setMessage('Digital ID generated and saved successfully.');
+      } else {
+        setMessage('Failed to generate Digital ID.');
+      }
+    } catch (error: any) {
+      console.error('[Auth] generate digital id error:', error);
+      setMessage('An error occurred while generating the Digital ID.');
+    } finally {
+      setGeneratingId(false);
+    }
+  }
+
+  // =========================================================================
   // RENDER
   // =========================================================================
 
@@ -328,14 +370,31 @@ export default function AuthPage() {
                   </div>
                 )}
               </div>
-              <div>
-                <button
-                  onClick={handleSignOut}
-                  disabled={loading}
-                  className="px-6 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 disabled:opacity-50 transition"
-                >
-                  {loading ? 'Signing out...' : 'Sign Out'}
-                </button>
+              <div className="flex flex-col items-end gap-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleGenerateDigitalId}
+                    disabled={generatingId}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                  >
+                    {generatingId ? 'Generating...' : 'Generate Digital ID'}
+                  </button>
+
+                  <button
+                    onClick={handleSignOut}
+                    disabled={loading}
+                    className="px-6 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 disabled:opacity-50 transition"
+                  >
+                    {loading ? 'Signing out...' : 'Sign Out'}
+                  </button>
+                </div>
+
+                {qrDataUrl && (
+                  <div className="mt-4 w-40 text-right">
+                    <img src={qrDataUrl} alt="Digital ID QR" className="w-40 h-40 object-contain rounded-lg border border-gray-700 bg-white p-1" />
+                    <div className="text-xs text-gray-400 break-words mt-2">{generatedId}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

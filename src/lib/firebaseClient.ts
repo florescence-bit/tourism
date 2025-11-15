@@ -38,6 +38,7 @@ import {
 } from 'firebase/firestore';
 
 import { FIREBASE_AUTH_TIMEOUT_MS } from './constants';
+import QRCode from 'qrcode';
 
 /** Firebase configuration loaded from environment variables */
 const firebaseConfig = {
@@ -429,6 +430,59 @@ export async function saveNotification(uid: string, payload: Record<string, any>
   } catch (error: any) {
     console.error('[Firebase] saveNotification error:', error);
     return false;
+  }
+}
+
+// ============================================================================
+// DIGITAL ID (QR) GENERATION
+// ============================================================================
+
+/**
+ * Generates a human-friendly digital ID using the user's name and stores it
+ * together with a generated QR code (data URL) in Firestore under
+ * `/profiles/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
+ *
+ * @param uid - User's UID
+ * @param name - Display name or full name to base the digital id on (optional)
+ * @returns Object containing digitalId and qrDataUrl on success, or null on failure
+ */
+export async function generateAndSaveDigitalId(uid: string, name?: string): Promise<{ digitalId: string; qrDataUrl: string } | null> {
+  if (!db) initFirebase();
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for generateAndSaveDigitalId');
+    return null;
+  }
+
+  try {
+    const normalized = (name || '').trim() || uid;
+    const initials = normalized
+      .split(/\s+/)
+      .map((s) => (s && s[0] ? s[0].toUpperCase() : ''))
+      .join('')
+      .slice(0, 4) || 'ID';
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const digitalId = `${initials}-${timestamp}-${rand}`;
+
+    const payload = {
+      uid,
+      name: normalized,
+      digitalId,
+      createdAt: Date.now(),
+    };
+
+    const qrPayload = { uid, digitalId, name: normalized };
+    // Generate QR code as data URL (PNG)
+    const qrDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), { margin: 1, width: 300 });
+
+    // Save to subcollection and merge into user profile
+    await setDoc(doc(db, 'profiles', uid, 'digitalIds', digitalId), { ...payload, qrDataUrl });
+    await setDoc(doc(db, 'profiles', uid), { digitalId, qrDataUrl }, { merge: true });
+
+    return { digitalId, qrDataUrl };
+  } catch (error: any) {
+    console.error('[Firebase] generateAndSaveDigitalId error:', error);
+    return null;
   }
 }
 
