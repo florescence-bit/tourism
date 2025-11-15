@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -38,10 +39,50 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <button className="p-2.5 hover:bg-surface-tertiary rounded-xl transition-smooth relative group text-text-secondary hover:text-text-primary">
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-red rounded-full animate-pulse"></span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className="p-2.5 hover:bg-surface-tertiary rounded-xl transition-smooth relative group text-text-secondary hover:text-text-primary"
+            >
+              <Bell size={20} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-red rounded-full animate-pulse"></span>
+            </button>
+            
+            {/* Notifications Dropdown */}
+            {notificationsOpen && (
+              <div className="absolute right-0 top-12 w-72 bg-surface-secondary border border-surface-tertiary rounded-lg shadow-2xl z-50 overflow-hidden animate-slide-down">
+                <div className="p-4 border-b border-surface-tertiary bg-surface-primary">
+                  <h3 className="text-sm font-semibold text-text-primary">Notifications</h3>
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  <div className="p-4 space-y-3">
+                    <div className="p-3 bg-accent-blue/10 rounded-lg border border-accent-blue/20">
+                      <p className="text-sm font-medium text-text-primary">Welcome to RAH!</p>
+                      <p className="text-xs text-text-secondary mt-1">Your safety companion is now active</p>
+                      <p className="text-xs text-text-tertiary mt-2">Just now</p>
+                    </div>
+                    <div className="p-3 bg-accent-green/10 rounded-lg border border-accent-green/20">
+                      <p className="text-sm font-medium text-text-primary">Check-in Successful</p>
+                      <p className="text-xs text-text-secondary mt-1">Your location has been shared with your contacts</p>
+                      <p className="text-xs text-text-tertiary mt-2">2 hours ago</p>
+                    </div>
+                    <div className="p-3 bg-surface-tertiary rounded-lg border border-surface-secondary">
+                      <p className="text-sm text-text-secondary">No more notifications</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 border-t border-surface-tertiary bg-surface-primary">
+                  <Link 
+                    href="/notifications" 
+                    className="text-xs text-accent-blue hover:text-accent-blue/80 font-medium transition"
+                    onClick={() => setNotificationsOpen(false)}
+                  >
+                    View All Notifications →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-surface-tertiary rounded-xl border border-surface-tertiary/50 group">
             {user ? (

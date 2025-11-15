@@ -1,8 +1,23 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { LayoutDashboard, MapPin, CreditCard, BarChart3, AlertCircle, User, Bell, Settings, LogOut } from 'lucide-react';
+import { signOut } from '@/lib/firebaseClient';
+import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
+  const router = useRouter();
+
+  async function handleLogout() {
+    try {
+      await signOut();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    router.push('/auth');
+  }
+
   return (
     <aside className="hidden md:flex w-72 bg-surface-primary border-r border-surface-tertiary flex-col h-screen sticky top-0">
       <div className="p-8 border-b border-surface-tertiary">
@@ -29,7 +44,10 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-surface-tertiary p-4">
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-text-secondary hover:text-text-primary hover:bg-surface-secondary rounded-xl transition-smooth duration-300 group font-medium">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 text-left text-text-secondary hover:text-text-primary hover:bg-surface-secondary rounded-xl transition-smooth duration-300 group font-medium"
+        >
           <LogOut size={20} />
           <span className="text-sm">Logout</span>
         </button>
