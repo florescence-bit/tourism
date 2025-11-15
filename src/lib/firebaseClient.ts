@@ -805,6 +805,190 @@ export async function getUserAnalytics(uid: string): Promise<Record<string, any>
 }
 
 // ============================================================================
+// ACCOUNT MANAGEMENT
+// ============================================================================
+
+/**
+ * Delete user account and all associated data from Firestore
+ * @param uid - User's UID
+ * @returns true on success, false on failure
+ */
+export async function deleteUserAccount(uid: string): Promise<boolean> {
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for deleteUserAccount');
+    return false;
+  }
+
+  try {
+    console.log('[Firebase] Deleting account for user:', uid);
+
+    // Delete user profile and all subcollections
+    const userDocRef = doc(db, 'users', uid);
+    
+    // Delete all check-ins
+    const checkInsCol = collection(db, 'users', uid, 'checkIns');
+    const checkInsSnap = await getDocs(checkInsCol);
+    for (const docSnap of checkInsSnap.docs) {
+      await setDoc(doc(db, 'users', uid, 'checkIns', docSnap.id), {}, { merge: false }).catch(() => {
+        // Silently fail individual deletes
+      });
+    }
+
+    // Delete all reports
+    const reportsCol = collection(db, 'users', uid, 'incidentReports');
+    const reportsSnap = await getDocs(reportsCol);
+    for (const docSnap of reportsSnap.docs) {
+      await setDoc(doc(db, 'users', uid, 'incidentReports', docSnap.id), {}, { merge: false }).catch(() => {
+        // Silently fail individual deletes
+      });
+    }
+
+    // Delete all digital IDs
+    const digitalIdsCol = collection(db, 'users', uid, 'digitalIDs');
+    const digitalIdsSnap = await getDocs(digitalIdsCol);
+    for (const docSnap of digitalIdsSnap.docs) {
+      await setDoc(doc(db, 'users', uid, 'digitalIDs', docSnap.id), {}, { merge: false }).catch(() => {
+        // Silently fail individual deletes
+      });
+    }
+
+    // Delete user profile document
+    await setDoc(userDocRef, {}, { merge: false }).catch(() => {
+      // Silently fail
+    });
+
+    console.log('[Firebase] Account deleted successfully for user:', uid);
+    return true;
+  } catch (error: any) {
+    console.error('[Firebase] deleteUserAccount error:', error);
+    return false;
+  }
+}
+
+/**
+ * Update user password
+ * @param newPassword - New password for the user
+ * @returns true on success, false on failure
+ */
+export async function updateUserPassword(newPassword: string): Promise<boolean> {
+  if (!auth) {
+    console.warn('[Firebase] Auth not available for updateUserPassword');
+    return false;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.warn('[Firebase] No authenticated user for updateUserPassword');
+      return false;
+    }
+
+    console.log('[Firebase] Updating password for user:', user.uid);
+    
+    // Import updatePassword from Firebase
+    const { updatePassword } = await import('firebase/auth');
+    await updatePassword(user, newPassword);
+    
+    console.log('[Firebase] Password updated successfully');
+    return true;
+  } catch (error: any) {
+    console.error('[Firebase] updateUserPassword error:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Update user email
+ * @param newEmail - New email for the user
+ * @returns true on success, false on failure
+ */
+export async function updateUserEmail(newEmail: string): Promise<boolean> {
+  if (!auth) {
+    console.warn('[Firebase] Auth not available for updateUserEmail');
+    return false;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.warn('[Firebase] No authenticated user for updateUserEmail');
+      return false;
+    }
+
+    console.log('[Firebase] Updating email for user:', user.uid);
+    
+    // Import updateEmail from Firebase
+    const { updateEmail } = await import('firebase/auth');
+    await updateEmail(user, newEmail);
+    
+    console.log('[Firebase] Email updated successfully');
+    return true;
+  } catch (error: any) {
+    console.error('[Firebase] updateUserEmail error:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Save user preferences/settings
+ * @param uid - User's UID
+ * @param settings - Settings object to save
+ * @returns true on success, false on failure
+ */
+export async function saveUserSettings(uid: string, settings: Record<string, any>): Promise<boolean> {
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for saveUserSettings');
+    return false;
+  }
+
+  try {
+    console.log('[Firebase] Saving settings for user:', uid);
+    
+    const settingsDocRef = doc(db, 'users', uid);
+    await setDoc(
+      settingsDocRef,
+      {
+        settings,
+        updatedAt: Date.now(),
+      },
+      { merge: true }
+    );
+
+    console.log('[Firebase] Settings saved successfully');
+    return true;
+  } catch (error: any) {
+    console.error('[Firebase] saveUserSettings error:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Get user settings/preferences
+ * @param uid - User's UID
+ * @returns Settings object or null
+ */
+export async function getUserSettings(uid: string): Promise<Record<string, any> | null> {
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for getUserSettings');
+    return null;
+  }
+
+  try {
+    const docRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return docSnap.data().settings || {};
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error('[Firebase] getUserSettings error:', error);
+    return null;
+  }
+}
+
+// ============================================================================
 // DEFAULT EXPORT
 // ============================================================================
 
@@ -827,6 +1011,11 @@ const firebaseClient = {
   getSettings,
   getUserAnalytics,
   generateAndSaveDigitalId,
+  deleteUserAccount,
+  updateUserPassword,
+  updateUserEmail,
+  saveUserSettings,
+  getUserSettings,
   isFirebaseConfigured,
 };
 
