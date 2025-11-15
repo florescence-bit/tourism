@@ -48,17 +48,17 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-surface-primary">
       {/* Header */}
-      <header className="border-b border-gray-800 sticky top-0 z-50 backdrop-blur-md bg-black/95">
+      <header className="border-b border-surface-tertiary sticky top-0 z-50 backdrop-blur-md glass-effect">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold tracking-tight">
+          <Link href="/" className="text-2xl font-bold tracking-tight text-text-primary hover:opacity-80 transition-smooth">
             RAH
           </Link>
           {mounted && (
             <Link
               href={user ? '/dashboard' : '/auth'}
-              className="px-6 py-2 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition"
+              className="btn-primary"
             >
               {user ? 'Dashboard' : 'Sign In / Up'}
             </Link>
@@ -68,11 +68,11 @@ export default function Home() {
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+        <div className="max-w-3xl mx-auto text-center animate-fade-in">
+          <h1 className="text-headline mb-6 leading-tight">
             Your Personal Safety Companion
           </h1>
-          <p className="text-xl text-gray-400 mb-8">
+          <p className="text-subtitle text-text-secondary mb-8">
             Stay safe while traveling. Real-time alerts, threat detection, and community
             support.
           </p>
@@ -82,29 +82,29 @@ export default function Home() {
                 {user ? (
                   <Link
                     href="/dashboard"
-                    className="px-8 py-3 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-2 group"
+                    className="btn-primary flex items-center justify-center gap-2 group"
                   >
                     Go to Dashboard{' '}
                     <ArrowRight
                       size={20}
-                      className="group-hover:translate-x-1 transition"
+                      className="group-hover:translate-x-1 transition-smooth"
                     />
                   </Link>
                 ) : (
                   <>
                     <Link
                       href="/auth"
-                      className="px-8 py-3 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-2 group"
+                      className="btn-primary flex items-center justify-center gap-2 group"
                     >
                       Get Started{' '}
                       <ArrowRight
                         size={20}
-                        className="group-hover:translate-x-1 transition"
+                        className="group-hover:translate-x-1 transition-smooth"
                       />
                     </Link>
                     <Link
                       href="/auth"
-                      className="px-8 py-3 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-white rounded-2xl font-semibold transition"
+                      className="btn-secondary"
                     >
                       Sign In / Up
                     </Link>
@@ -118,7 +118,7 @@ export default function Home() {
 
       {/* Features */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-4xl font-bold mb-12 text-center">
+        <h2 className="text-title font-bold mb-12 text-center">
           Why Choose RAH?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -157,16 +157,16 @@ export default function Home() {
 
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div className="bg-gray-900 border border-gray-800 rounded-3xl p-12">
-          <h2 className="text-4xl font-bold mb-6">Ready to Stay Safe?</h2>
-          <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
+        <div className="card-elevated p-12 bg-gradient-to-br from-surface-secondary to-surface-tertiary">
+          <h2 className="text-title font-bold mb-6">Ready to Stay Safe?</h2>
+          <p className="text-subtitle text-text-secondary mb-8 max-w-2xl mx-auto">
             Join thousands of travelers who trust RAH to keep them safe
             across India.
           </p>
           {mounted && (
             <Link
               href={user ? '/dashboard' : '/auth'}
-              className="px-8 py-3 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition inline-block"
+              className="btn-primary inline-block"
             >
               {user ? 'Go to Dashboard' : 'Start Using RAH Now'}
             </Link>
@@ -175,8 +175,8 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-gray-500">
+      <footer className="border-t border-surface-tertiary mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-text-tertiary">
           <p>
             &copy; 2024 RAH - Indian Tourist Safety App. All rights
             reserved.
@@ -200,10 +200,10 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 hover:border-gray-700 transition hover:shadow-xl">
-      <div className="mb-4 p-3 bg-gray-800 rounded-2xl w-fit">{icon}</div>
-      <h3 className="text-lg font-bold mb-2">{title}</h3>
-      <p className="text-gray-400">{description}</p>
+    <div className="card-interactive group">
+      <div className="mb-4 p-3 bg-surface-tertiary group-hover:bg-accent-blue/20 rounded-lg transition-smooth w-fit text-text-secondary group-hover:text-accent-blue">{icon}</div>
+      <h3 className="text-lg font-bold mb-2 text-text-primary">{title}</h3>
+      <p className="text-body text-text-secondary">{description}</p>
     </div>
   );
 }
