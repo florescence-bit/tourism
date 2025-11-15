@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Menu, X, Settings, LogOut, Bell } from 'lucide-react';
+import { Menu, X, LogOut, Bell } from 'lucide-react';
 import { onAuthChange, signOut } from '@/lib/firebaseClient';
 import { useRouter } from 'next/navigation';
 
@@ -72,10 +72,6 @@ export default function Header() {
               <Link href="/auth" className="btn-primary text-sm">Sign In / Up</Link>
             </div>
           )}
-
-          <button className="p-2.5 hover:bg-surface-tertiary rounded-xl transition-smooth text-text-secondary hover:text-text-primary">
-            <Settings size={20} />
-          </button>
         </div>
       </div>
 
