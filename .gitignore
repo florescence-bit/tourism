@@ -1,0 +1,47 @@
+.next/
+node_modules/
+/.pnp/
+.pnp.js
+dist/
+out/
+build/
+
+# Local env files
+.env
+.env.*
+.env.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Parcel, Next cache
+.cache/
+.next/cache/
+
+# Optional npm cache
+.npm/
+
+# Generated package lock (if you prefer to keep it, remove this)
+# package-lock.json
