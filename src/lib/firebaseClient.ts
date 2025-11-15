@@ -337,7 +337,7 @@ export async function sendVerificationEmail(user: User): Promise<boolean> {
 
 /**
  * Retrieves the user profile document from Firestore.
- * Profiles are stored at /profiles/{uid}.
+ * Profiles are stored at /users/{uid}.
  *
  * @param uid - The user's UID
  * @returns Promise resolving to profile data object, or null if not found or error occurs
@@ -356,8 +356,8 @@ export async function getProfile(uid: string): Promise<Record<string, any> | nul
   }
 
   try {
-    console.log('[Firebase] Getting profile document from /profiles/' + uid);
-    const ref = doc(db, 'profiles', uid);
+    console.log('[Firebase] Getting profile document from /users/' + uid);
+    const ref = doc(db, 'users', uid);
     const snap: DocumentSnapshot = await getDoc(ref);
     const data = snap.exists() ? snap.data() : null;
     console.log('[Firebase] getProfile result:', data ? 'found' : 'not found', data);
@@ -371,7 +371,7 @@ export async function getProfile(uid: string): Promise<Record<string, any> | nul
 /**
  * Saves or updates a user profile document in Firestore.
  * Uses merge: true to preserve existing fields not in the update payload.
- * Profiles are stored at /profiles/{uid}.
+ * Profiles are stored at /users/{uid}.
  *
  * @param uid - The user's UID
  * @param profile - Object containing profile fields to save/update
@@ -391,9 +391,9 @@ export async function saveProfile(uid: string, profile: Record<string, any>): Pr
   }
 
   try {
-    console.log('[Firebase] Setting profile document at /profiles/' + uid, profile);
-    const ref = doc(db, 'profiles', uid);
-    await setDoc(ref, profile, { merge: true });
+    console.log('[Firebase] Setting profile document at /users/' + uid, profile);
+    const ref = doc(db, 'users', uid);
+    await setDoc(ref, { id: uid, ...profile }, { merge: true });
     console.log('[Firebase] Profile saved successfully');
     return true;
   } catch (error: any) {
@@ -404,7 +404,7 @@ export async function saveProfile(uid: string, profile: Record<string, any>): Pr
 
 /**
  * Retrieves the user's notifications from Firestore.
- * Notifications are stored at /profiles/{uid}/notifications and ordered by recency (newest first).
+ * Notifications are stored at /users/{uid}/notifications and ordered by recency (newest first).
  *
  * @param uid - The user's UID
  * @returns Promise resolving to array of notification documents, or empty array on error
@@ -417,7 +417,7 @@ export async function listNotifications(uid: string): Promise<Array<Record<strin
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'notifications');
+    const col = collection(db, 'users', uid, 'notifications');
     const q = query(col, orderBy('createdAt', 'desc'));
     const snaps = await getDocs(q);
     return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -430,7 +430,7 @@ export async function listNotifications(uid: string): Promise<Array<Record<strin
 /**
  * Saves a new notification to the user's notifications collection in Firestore.
  * Automatically adds a createdAt timestamp.
- * Notifications are stored at /profiles/{uid}/notifications.
+ * Notifications are stored at /users/{uid}/notifications.
  *
  * @param uid - The user's UID
  * @param payload - Object containing notification data (title, message, etc.)
@@ -444,7 +444,7 @@ export async function saveNotification(uid: string, payload: Record<string, any>
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'notifications');
+    const col = collection(db, 'users', uid, 'notifications');
     await addDoc(col, { ...payload, createdAt: Date.now() });
     return true;
   } catch (error: any) {
@@ -460,7 +460,7 @@ export async function saveNotification(uid: string, payload: Record<string, any>
 /**
  * Generates a human-friendly digital ID using the user's name and stores it
  * together with a generated QR code (data URL) in Firestore under
- * `/profiles/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
+ * `/users/{uid}/digitalIds/{digitalId}` and also merges into the profile doc.
  *
  * @param uid - User's UID
  * @param name - Display name or full name to base the digital id on (optional)
@@ -496,8 +496,8 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
     const qrDataUrl = await QRCode.toDataURL(JSON.stringify(qrPayload), { margin: 1, width: 300 });
 
     // Save to subcollection and merge into user profile
-    await setDoc(doc(db, 'profiles', uid, 'digitalIds', digitalId), { ...payload, qrDataUrl });
-    await setDoc(doc(db, 'profiles', uid), { digitalId, qrDataUrl }, { merge: true });
+    await setDoc(doc(db, 'users', uid, 'digitalIds', digitalId), { ...payload, qrDataUrl });
+    await setDoc(doc(db, 'users', uid), { digitalId, qrDataUrl }, { merge: true });
 
     return { digitalId, qrDataUrl };
   } catch (error: any) {
@@ -512,7 +512,7 @@ export async function generateAndSaveDigitalId(uid: string, name?: string): Prom
 
 /**
  * Saves a check-in location to Firestore.
- * Check-ins are stored at /profiles/{uid}/checkIns/{checkInId}.
+ * Check-ins are stored at /users/{uid}/checkIns/{checkInId}.
  *
  * @param uid - The user's UID
  * @param checkInData - Object containing location, latitude, longitude, accuracy, place
@@ -535,7 +535,7 @@ export async function saveCheckIn(
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'checkIns');
+    const col = collection(db, 'users', uid, 'checkIns');
     const docRef = await addDoc(col, {
       ...checkInData,
       createdAt: Date.now(),
@@ -563,7 +563,7 @@ export async function listCheckIns(uid: string): Promise<Array<Record<string, an
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'checkIns');
+    const col = collection(db, 'users', uid, 'checkIns');
     const q = query(col, orderBy('createdAt', 'desc'));
     const snaps = await getDocs(q);
     return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -579,7 +579,7 @@ export async function listCheckIns(uid: string): Promise<Array<Record<string, an
 
 /**
  * Saves an incident report to Firestore.
- * Reports are stored at /profiles/{uid}/reports/{reportId}.
+ * Reports are stored at /users/{uid}/incidentReports/{reportId}.
  *
  * @param uid - The user's UID
  * @param reportData - Object containing incidentType, description, location
@@ -600,7 +600,7 @@ export async function saveReport(
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'reports');
+    const col = collection(db, 'users', uid, 'incidentReports');
     const docRef = await addDoc(col, {
       ...reportData,
       status: 'submitted',
@@ -629,7 +629,7 @@ export async function listReports(uid: string): Promise<Array<Record<string, any
   }
 
   try {
-    const col = collection(db, 'profiles', uid, 'reports');
+    const col = collection(db, 'users', uid, 'incidentReports');
     const q = query(col, orderBy('createdAt', 'desc'));
     const snaps = await getDocs(q);
     return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -662,7 +662,7 @@ export async function saveSettings(
   }
 
   try {
-    const ref = doc(db, 'profiles', uid);
+    const ref = doc(db, 'users', uid);
     await setDoc(ref, { settings }, { merge: true });
     console.debug('[Firebase] Settings saved for user:', uid);
     return true;
@@ -686,7 +686,7 @@ export async function getSettings(uid: string): Promise<Record<string, any>> {
   }
 
   try {
-    const ref = doc(db, 'profiles', uid);
+    const ref = doc(db, 'users', uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
       return snap.data().settings || {};
