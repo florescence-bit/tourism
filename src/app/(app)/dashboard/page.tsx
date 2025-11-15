@@ -61,7 +61,7 @@ function StatCard({
   label,
   value,
   detail,
-  valueColor = 'text-white',
+  valueColor = 'text-accent-blue',
 }: {
   icon: ReactNode;
   label: string;
@@ -70,14 +70,14 @@ function StatCard({
   valueColor?: string;
 }): ReactNode {
   return (
-    <div className="bg-gray-950 border border-gray-800 rounded-3xl p-6 hover:border-gray-700 transition">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="text-sm text-gray-600 mb-2 font-medium">{label}</div>
-          <div className={`text-3xl font-bold ${valueColor}`}>{value}</div>
-          <div className="text-sm text-gray-600 mt-2">{detail}</div>
+    <div className="card-elevated hover:shadow-elevation3 group">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="label-base text-text-tertiary">{label}</div>
+          <div className={`text-3xl font-bold ${valueColor} mt-2`}>{value}</div>
+          <div className="text-caption text-text-tertiary mt-3">{detail}</div>
         </div>
-        <div className="p-3 bg-gray-900 rounded-2xl text-gray-400">{icon}</div>
+        <div className="p-3 bg-surface-tertiary rounded-xl text-text-secondary group-hover:text-accent-blue transition-smooth">{icon}</div>
       </div>
     </div>
   );
@@ -97,15 +97,15 @@ function ActionButton({
   return (
     <Link
       href={href}
-      className="bg-gray-950 border border-gray-800 rounded-3xl p-6 hover:border-gray-700 hover:bg-gray-900 transition block group"
+      className="card-interactive group block"
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-3 bg-gray-900 group-hover:bg-gray-800 rounded-2xl transition text-gray-400">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-3 bg-surface-tertiary group-hover:bg-accent-blue/20 rounded-xl transition-smooth text-text-secondary group-hover:text-accent-blue">
           {icon}
         </div>
       </div>
-      <h3 className="font-medium text-lg mb-1">{label}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
+      <h3 className="font-semibold text-text-primary mb-2">{label}</h3>
+      <p className="text-caption text-text-tertiary">{description}</p>
     </Link>
   );
 }
@@ -190,13 +190,13 @@ export default function Dashboard() {
     return (
       <div className="p-4 sm:p-8 max-w-7xl">
         <div className="animate-pulse space-y-8">
-          <div className="h-12 bg-gray-800 rounded w-1/2"></div>
+          <div className="h-12 bg-surface-tertiary rounded w-1/2"></div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-800 rounded-3xl"></div>
+              <div key={i} className="h-32 bg-surface-tertiary rounded-xl"></div>
             ))}
           </div>
-          <div className="h-80 bg-gray-800 rounded-3xl"></div>
+          <div className="h-80 bg-surface-tertiary rounded-xl"></div>
         </div>
       </div>
     );
@@ -204,16 +204,16 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl">
-      <div className="mb-12">
-        <h1 className="text-5xl font-bold mb-2">{user ? DASHBOARD_WELCOME : 'Welcome to RAH'}</h1>
-        <p className="text-gray-600">{user ? DASHBOARD_SUBTITLE : 'Please sign in to access your dashboard'}</p>
+      <div className="mb-12 animate-fade-in">
+        <h1 className="text-headline mb-3">{user ? DASHBOARD_WELCOME : 'Welcome to RAH'}</h1>
+        <p className="text-subtitle text-text-secondary">{user ? DASHBOARD_SUBTITLE : 'Please sign in to access your dashboard'}</p>
       </div>
 
       {!user ? (
-        <div className="p-8 bg-blue-900 border border-blue-700 rounded-lg text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-blue-400" />
+        <div className="alert-info rounded-xl p-8 text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
           <p className="text-lg font-semibold mb-2">Sign in to access your dashboard</p>
-          <p className="text-sm text-blue-300">Please sign in to see your safety stats, check-in history, and threat level.</p>
+          <p className="text-sm">Please sign in to see your safety stats, check-in history, and threat level.</p>
         </div>
       ) : (
         <>
@@ -223,6 +223,7 @@ export default function Dashboard() {
               label="Last Check-In"
               value={recentCheckins[0]?.time ?? '—'}
               detail={recentCheckins[0]?.location ?? 'No check-ins yet'}
+              valueColor="text-accent-blue"
             />
 
             <StatCard
@@ -238,12 +239,13 @@ export default function Dashboard() {
               label="Total Check-Ins"
               value={`${analytics.totalCheckIns || 0}`}
               detail={`${analytics.recentCheckIns30Days || 0} in last 30 days`}
+              valueColor="text-accent-green"
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="lg:col-span-2 bg-gray-950 rounded-3xl p-6 border border-gray-800">
-              <h2 className="text-lg font-semibold mb-4">Your Location</h2>
+            <div className="lg:col-span-2 card-elevated">
+              <h2 className="text-title font-bold mb-6">Your Location</h2>
               <SimpleMap
                 latitude={position?.lat ?? 28.6139}
                 longitude={position?.lon ?? 77.209}
@@ -272,36 +274,36 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-gray-950 border border-gray-800 rounded-3xl p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp size={24} />
-              <h2 className="text-lg font-semibold">Recent Check-Ins</h2>
+          <div className="card-elevated">
+            <div className="flex items-center gap-3 mb-6">
+              <TrendingUp size={24} className="text-accent-blue" />
+              <h2 className="text-title font-bold">Recent Check-Ins</h2>
             </div>
             <div className="space-y-3">
               {recentCheckins.length > 0 ? (
                 recentCheckins.map((checkin) => (
                   <div
                     key={checkin.id}
-                    className="flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-800 transition"
+                    className="flex items-center justify-between p-4 bg-surface-secondary hover:bg-surface-tertiary rounded-lg border border-surface-tertiary transition-smooth"
                   >
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        <MapPin size={16} />
+                    <div className="flex-1">
+                      <div className="font-semibold text-text-primary flex items-center gap-2">
+                        <MapPin size={16} className="text-accent-blue" />
                         {checkin.location}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">{checkin.time}</div>
+                      <div className="text-sm text-text-tertiary mt-2">{checkin.time}</div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 ${
                       checkin.status === 'Live'
-                        ? 'bg-green-900 text-green-300'
-                        : 'bg-gray-800 text-gray-300'
+                        ? 'badge-success'
+                        : 'badge-primary'
                     }`}>
                       ✓ {checkin.status}
                     </span>
                   </div>
                 ))
               ) : (
-                <div className="text-center text-gray-500 py-8">
+                <div className="text-center text-text-tertiary py-8">
                   No check-ins yet. Start by checking in your current location.
                 </div>
               )}
