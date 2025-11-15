@@ -13,7 +13,7 @@
 
 import { ReactNode, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { onAuthChange } from '@/lib/firebaseClient';
+import { onAuthChange, isFirebaseConfigured } from '@/lib/firebaseClient';
 import Header from '@/components/layout/header';
 import Sidebar from '@/components/layout/sidebar';
 
@@ -76,9 +76,26 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         unsubscribe();
       }
     };
-  }, [router, pathname]);
+  }, [router, pathname, authLoading]);
 
   // Show loading state while checking authentication
+  // If Firebase is not configured on this deployment, show a helpful message
+  if (!isFirebaseConfigured()) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black text-white p-6">
+        <div className="max-w-xl text-center">
+          <h2 className="text-2xl font-semibold mb-4">Application not configured</h2>
+          <p className="mb-4 text-gray-300">
+            Firebase configuration is missing in this deployment. Authentication is unavailable.
+            Please configure the required environment variables (NEXT_PUBLIC_FIREBASE_*) in your
+            deployment settings (Vercel) and redeploy.
+          </p>
+          <p className="text-sm text-gray-400">If you are the project owner, see project documentation for setup steps.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!mounted || authLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-black">

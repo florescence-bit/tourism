@@ -61,6 +61,14 @@ function isFirebaseConfigValid(): boolean {
   );
 }
 
+/**
+ * Returns whether Firebase configuration is present and appears valid.
+ * Exported so UI code can present a helpful message when configuration is missing
+ */
+export function isFirebaseConfigured(): boolean {
+  return isFirebaseConfigValid();
+}
+
 /** Global Firebase initialization flag */
 let appInitialized = false;
 
@@ -432,7 +440,7 @@ export async function saveNotification(uid: string, payload: Record<string, any>
  * Default export provides convenient access to main firebase functions.
  * Can be imported as: `import firebase from '@/lib/firebaseClient'`
  */
-export default {
+const firebaseClient = {
   initFirebase,
   ensureAnonAuth,
   getProfile,
@@ -440,3 +448,5 @@ export default {
   listNotifications,
   saveNotification,
 };
+
+export default firebaseClient;
