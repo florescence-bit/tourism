@@ -27,7 +27,7 @@ import {
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   /**
@@ -35,9 +35,9 @@ export default function Home() {
    * If yes, show a button to go to dashboard instead of /auth.
    */
   useEffect(() => {
+    setMounted(true);
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
-      setIsLoading(false);
     });
 
     return () => {
@@ -55,7 +55,7 @@ export default function Home() {
           <Link href="/" className="text-2xl font-bold tracking-tight">
             RAH
           </Link>
-          {!isLoading && (
+          {mounted && (
             <Link
               href={user ? '/dashboard' : '/auth'}
               className="px-6 py-2 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition"
@@ -77,7 +77,7 @@ export default function Home() {
             support.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {!isLoading && (
+            {mounted && (
               <>
                 {user ? (
                   <Link
@@ -163,7 +163,7 @@ export default function Home() {
             Join thousands of travelers who trust RAH to keep them safe
             across India.
           </p>
-          {!isLoading && (
+          {mounted && (
             <Link
               href={user ? '/dashboard' : '/auth'}
               className="px-8 py-3 bg-white text-black rounded-2xl font-semibold hover:bg-gray-100 transition inline-block"
