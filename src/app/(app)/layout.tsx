@@ -82,15 +82,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // If Firebase is not configured on this deployment, show a helpful message
   if (!isFirebaseConfigured()) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black text-white p-6">
-        <div className="max-w-xl text-center">
-          <h2 className="text-2xl font-semibold mb-4">Application not configured</h2>
-          <p className="mb-4 text-gray-300">
+      <div className="flex items-center justify-center min-h-screen bg-surface-primary text-text-primary px-6">
+        <div className="max-w-md text-center animate-fade-in">
+          <div className="mb-6 text-4xl">⚙️</div>
+          <h2 className="text-title mb-4">Application Not Configured</h2>
+          <p className="text-body mb-4">
             Firebase configuration is missing in this deployment. Authentication is unavailable.
             Please configure the required environment variables (NEXT_PUBLIC_FIREBASE_*) in your
             deployment settings (Vercel) and redeploy.
           </p>
-          <p className="text-sm text-gray-400">If you are the project owner, see project documentation for setup steps.</p>
+          <p className="text-caption text-text-tertiary">
+            If you are the project owner, see project documentation for setup steps.
+          </p>
         </div>
       </div>
     );
@@ -98,10 +101,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   if (!mounted || authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-white mx-auto mb-4"></div>
-          <p className="text-gray-400">Checking authentication...</p>
+      <div className="flex items-center justify-center min-h-screen bg-surface-primary">
+        <div className="text-center animate-fade-in">
+          <div className="mb-6 flex justify-center">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 rounded-full border-2 border-surface-tertiary border-t-accent-blue animate-spin"></div>
+            </div>
+          </div>
+          <p className="text-text-secondary font-medium">Checking authentication...</p>
         </div>
       </div>
     );
@@ -111,12 +118,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // Show full layout (sidebar, header, content)
   if (isAuthPage) {
     return (
-      <div className="flex h-screen bg-black text-white">
+      <div className="flex h-screen bg-surface-primary text-text-primary">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-auto">
-            {children}
+          <main className="flex-1 overflow-auto bg-gradient-to-b from-surface-primary to-surface-secondary">
+            <div className="h-full">
+              {children}
+            </div>
           </main>
         </div>
       </div>
@@ -132,12 +141,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   // User is authenticated; render protected layout with sidebar and header
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-surface-primary text-text-primary">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto">
-          {children}
+        <main className="flex-1 overflow-auto bg-gradient-to-b from-surface-primary to-surface-secondary">
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

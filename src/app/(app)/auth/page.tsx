@@ -406,67 +406,80 @@ export default function AuthPage() {
   // =========================================================================
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8">Authentication</h1>
+    <div className="p-8 md:p-12 max-w-3xl mx-auto">
+      <div className="mb-12 animate-fade-in">
+        <h1 className="text-headline mb-2">Authentication</h1>
+        <p className="text-subtitle text-text-secondary">Sign in or create your RAH account</p>
+      </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* SIGNED-IN CARD: Show when user is authenticated */}
         {user ? (
-          <div className="p-6 bg-green-900 bg-opacity-20 rounded-3xl border border-green-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-green-400 mb-2 font-medium">✓ You are signed in</div>
-                <div className="font-mono text-lg font-semibold">
+          <div className="card-elevated bg-gradient-to-br from-accent-green/10 to-accent-green/5 border-accent-green/30 animate-slide-up">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse"></div>
+                  <span className="text-sm font-semibold text-accent-green">Signed In</span>
+                </div>
+                <div className="font-mono text-lg font-semibold text-text-primary mb-3">
                   {(user && user.email) || user?.uid}
                 </div>
                 {user?.displayName && (
-                  <div className="text-sm text-green-300 mt-1">
-                    Name: {user.displayName}
+                  <div className="text-sm text-text-secondary">
+                    Name: <span className="text-text-primary font-medium">{user.displayName}</span>
                   </div>
                 )}
               </div>
-              <div className="flex flex-col items-end gap-3">
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleGenerateDigitalId}
-                    disabled={generatingId}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-                  >
-                    {generatingId ? 'Generating...' : 'Generate Digital ID'}
-                  </button>
+              <div className="flex flex-col gap-3 w-full md:w-auto">
+                <button
+                  onClick={handleGenerateDigitalId}
+                  disabled={generatingId}
+                  className="btn-primary"
+                >
+                  {generatingId ? 'Generating...' : 'Generate Digital ID'}
+                </button>
 
-                  <button
-                    onClick={handleSignOut}
-                    disabled={loading}
-                    className="px-6 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 disabled:opacity-50 transition"
-                  >
-                    {loading ? 'Signing out...' : 'Sign Out'}
-                  </button>
-                </div>
-
-                {qrDataUrl && (
-                  <div className="mt-4 w-40 text-right">
-                    <img src={qrDataUrl} alt="Digital ID QR" className="w-40 h-40 object-contain rounded-lg border border-gray-700 bg-white p-1" />
-                    <div className="text-xs text-gray-400 break-words mt-2">{generatedId}</div>
-                  </div>
-                )}
+                <button
+                  onClick={handleSignOut}
+                  disabled={loading}
+                  className="btn-danger"
+                >
+                  {loading ? 'Signing out...' : 'Sign Out'}
+                </button>
               </div>
             </div>
+
+            {qrDataUrl && (
+              <div className="mt-8 pt-8 border-t border-surface-tertiary">
+                <p className="text-sm font-semibold text-text-primary mb-4">Your Digital ID</p>
+                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                  <div className="bg-white p-4 rounded-xl">
+                    <img src={qrDataUrl} alt="Digital ID QR" className="w-40 h-40 object-contain" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-text-tertiary font-mono break-all bg-surface-secondary p-4 rounded-lg border border-surface-tertiary">
+                      {generatedId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
 
         {/* MODE TOGGLE: Hidden when user is signed in */}
         {!user ? (
-          <div className="flex items-center gap-3 border-b border-gray-800 pb-6">
+          <div className="flex items-center gap-2 border-b border-surface-tertiary pb-6 animate-fade-in">
             <button
               onClick={() => {
                 setMode('signin');
                 setMessage(null);
               }}
-              className={`px-6 py-2 rounded-full font-medium transition ${
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
                 mode === 'signin'
-                  ? 'bg-white text-black'
-                  : 'bg-gray-900 text-gray-300 hover:text-white hover:bg-gray-800'
+                  ? 'btn-primary'
+                  : 'btn-secondary'
               }`}
             >
               Sign In
@@ -476,10 +489,10 @@ export default function AuthPage() {
                 setMode('signup');
                 setMessage(null);
               }}
-              className={`px-6 py-2 rounded-full font-medium transition ${
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
                 mode === 'signup'
-                  ? 'bg-white text-black'
-                  : 'bg-gray-900 text-gray-300 hover:text-white hover:bg-gray-800'
+                  ? 'btn-primary'
+                  : 'btn-secondary'
               }`}
             >
               Sign Up
@@ -489,14 +502,14 @@ export default function AuthPage() {
 
         {/* AUTH FORM: Provider buttons and email/password form (hidden when signed in) */}
         {!user ? (
-          <div className="bg-gray-950 p-8 rounded-3xl border border-gray-800">
+          <div className="card-elevated animate-slide-up">
             {/* PROVIDER BUTTONS */}
-            <div className="mb-6 flex flex-col gap-3">
+            <div className="mb-8 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => handleProviderSignIn('google')}
                 disabled={loading}
-                className="w-full h-12 flex items-center justify-center gap-3 rounded-full bg-white text-black font-semibold hover:bg-gray-100 disabled:opacity-50 transition"
+                className="w-full h-12 flex items-center justify-center gap-3 rounded-lg bg-white text-black font-semibold hover:bg-gray-50 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 <GoogleIcon />
                 {loading ? 'Please wait...' : 'Continue with Google'}
@@ -505,7 +518,7 @@ export default function AuthPage() {
                 type="button"
                 onClick={() => handleProviderSignIn('github')}
                 disabled={loading}
-                className="w-full h-12 flex items-center justify-center gap-3 rounded-full bg-gray-800 text-white border border-gray-700 font-semibold hover:bg-gray-700 disabled:opacity-50 transition"
+                className="w-full h-12 flex items-center justify-center gap-3 rounded-lg bg-surface-secondary text-text-primary border border-surface-tertiary font-semibold hover:bg-surface-tertiary active:scale-95 disabled:opacity-50 transition-all duration-200"
               >
                 <GitHubIcon />
                 {loading ? 'Please wait...' : 'Continue with GitHub'}
@@ -513,26 +526,26 @@ export default function AuthPage() {
             </div>
 
             {/* DIVIDER */}
-            <div className="relative mb-6">
+            <div className="relative mb-8">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-700"></div>
+                <div className="w-full border-t border-surface-tertiary"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-950 text-gray-500">or</span>
+                <span className="px-3 bg-surface-secondary text-text-tertiary font-medium">or continue with email</span>
               </div>
             </div>
 
             {/* EMAIL/PASSWORD FORM */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email Input */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2 font-semibold">Email Address</label>
+                <label className="label-base">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                  className="input-base"
                   placeholder="you@example.com"
                   required
                 />
@@ -540,13 +553,13 @@ export default function AuthPage() {
 
               {/* Password Input */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2 font-semibold">Password</label>
+                <label className="label-base">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                  className="input-base"
                   placeholder="••••••••"
                   required
                   minLength={MIN_PASSWORD_LENGTH}
@@ -556,15 +569,13 @@ export default function AuthPage() {
               {/* Confirm Password (Signup Only) */}
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">
-                    Confirm Password
-                  </label>
+                  <label className="label-base">Confirm Password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    className="input-base"
                     placeholder="••••••••"
                     required
                     minLength={MIN_PASSWORD_LENGTH}
@@ -575,13 +586,13 @@ export default function AuthPage() {
               {/* Full Name (Signup Only) */}
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Full Name</label>
+                  <label className="label-base">Full Name</label>
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    className="input-base"
                     placeholder="John Doe"
                     required
                   />
@@ -591,13 +602,13 @@ export default function AuthPage() {
               {/* Age (Signup Only) */}
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Age</label>
+                  <label className="label-base">Age</label>
                   <input
                     type="number"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    className="input-base"
                     placeholder="25"
                     min="18"
                     required
@@ -608,16 +619,16 @@ export default function AuthPage() {
               {/* User Type (Signup Only) */}
               {mode === 'signup' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Are you an Indian citizen?</label>
+                  <label className="label-base">Are you an Indian citizen?</label>
                   <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setUserType('indian')}
                       disabled={loading}
-                      className={`flex-1 h-10 rounded-lg font-medium transition ${
+                      className={`flex-1 h-10 rounded-lg font-medium transition-all duration-200 ${
                         userType === 'indian'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-900 text-gray-300 border border-gray-700 hover:text-white'
+                          ? 'btn-primary'
+                          : 'btn-secondary'
                       }`}
                     >
                       Yes (Indian)
@@ -626,10 +637,10 @@ export default function AuthPage() {
                       type="button"
                       onClick={() => setUserType('foreigner')}
                       disabled={loading}
-                      className={`flex-1 h-10 rounded-lg font-medium transition ${
+                      className={`flex-1 h-10 rounded-lg font-medium transition-all duration-200 ${
                         userType === 'foreigner'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-900 text-gray-300 border border-gray-700 hover:text-white'
+                          ? 'btn-primary'
+                          : 'btn-secondary'
                       }`}
                     >
                       No (Foreigner)
@@ -641,14 +652,14 @@ export default function AuthPage() {
               {/* Document Type (Signup Only) */}
               {mode === 'signup' && userType && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">
+                  <label className="label-base">
                     {userType === 'indian' ? 'Document Type' : 'Visa / Passport'}
                   </label>
                   <select
                     value={documentType}
                     onChange={(e) => setDocumentType(e.target.value as 'aadhar' | 'visa' | 'passport')}
                     disabled={loading}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition"
+                    className="input-base"
                     required
                   >
                     <option value="">Select a document...</option>
@@ -667,7 +678,7 @@ export default function AuthPage() {
               {/* Document Number (Signup Only) */}
               {mode === 'signup' && documentType && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2 font-semibold">
+                  <label className="label-base">
                     {documentType === 'aadhar'
                       ? 'Aadhar Number'
                       : documentType === 'passport'
@@ -679,7 +690,7 @@ export default function AuthPage() {
                     value={documentNumber}
                     onChange={(e) => setDocumentNumber(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    className="input-base"
                     placeholder={
                       documentType === 'aadhar'
                         ? 'XXXX XXXX XXXX'
@@ -695,7 +706,7 @@ export default function AuthPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 rounded-full bg-white text-black font-semibold hover:bg-gray-100 disabled:opacity-50 transition"
+                  className="w-full btn-primary"
                 >
                   {loading
                     ? 'Please wait...'
@@ -708,10 +719,10 @@ export default function AuthPage() {
               {/* Message Display (Error or Success) */}
               {message && (
                 <div
-                  className={`mt-4 text-sm p-4 rounded-2xl ${
+                  className={`mt-4 text-sm p-4 rounded-lg border transition-all duration-200 ${
                     message.startsWith('✓')
-                      ? 'bg-green-900 bg-opacity-30 text-green-300 border border-green-700'
-                      : 'bg-red-900 bg-opacity-30 text-red-300 border border-red-700'
+                      ? 'alert-success'
+                      : 'alert-danger'
                   }`}
                 >
                   {message}
@@ -721,9 +732,9 @@ export default function AuthPage() {
 
             {/* HELP TEXT */}
             {!message && (
-              <div className="mt-6 p-4 bg-blue-900 bg-opacity-20 rounded-2xl border border-blue-700 text-sm text-blue-300">
+              <div className="mt-8 p-4 alert-info rounded-lg">
                 <p className="font-semibold mb-1">💡 Tip:</p>
-                <p>
+                <p className="text-sm">
                   {mode === 'signin'
                     ? 'Don\'t have an account? Click "Sign Up" to create one.'
                     : 'Already have an account? Click "Sign In" to log in.'}
