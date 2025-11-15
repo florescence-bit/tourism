@@ -49,6 +49,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
 
+/**
+ * Validates that Firebase configuration is complete.
+ * Returns true if all required config values are present (non-empty strings).
+ * Returns false if any values are missing or empty.
+ */
+function isFirebaseConfigValid(): boolean {
+  const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
+  return requiredKeys.every(
+    (key) => firebaseConfig[key] && firebaseConfig[key].trim().length > 0
+  );
+}
+
 /** Global Firebase initialization flag */
 let appInitialized = false;
 
@@ -62,15 +74,26 @@ let db: Firestore | null = null;
  * Initializes the Firebase app with the provided configuration.
  * Safe to call multiple times; will only initialize once.
  * Catches and logs errors without throwing to allow graceful degradation.
+ * 
+ * Returns false if Firebase config is incomplete or initialization fails.
+ * This allows the app to handle missing credentials gracefully (e.g., on Vercel without env vars).
  *
- * @throws Logs warnings to console if initialization fails
+ * @returns boolean - true if Firebase initialized successfully, false if config invalid or error occurred
  */
-export function initFirebase(): void {
+export function initFirebase(): boolean {
   try {
+    // Check if Firebase config is complete before attempting initialization
+    if (!isFirebaseConfigValid()) {
+      console.warn('[Firebase] Configuration incomplete - missing required environment variables');
+      console.warn('[Firebase] Ensure NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, and NEXT_PUBLIC_FIREBASE_PROJECT_ID are set');
+      return false;
+    }
+
     if (!appInitialized) {
       // Initialize Firebase app if not already initialized
       if (!getApps().length) {
         initializeApp(firebaseConfig);
+        console.debug('[Firebase] App initialized successfully');
       } else {
         getApp();
       }
@@ -78,10 +101,14 @@ export function initFirebase(): void {
       auth = getAuth();
       db = getFirestore();
       appInitialized = true;
+      return true;
     }
+    
+    return appInitialized;
   } catch (error) {
     // Log but don't throw; allow app to continue without Firebase if config is incomplete
-    console.warn('[Firebase] Initialization error:', error);
+    console.error('[Firebase] Initialization error:', error);
+    return false;
   }
 }
 
@@ -241,6 +268,9 @@ export async function signOut(): Promise<boolean> {
 /**
  * Subscribes to auth state changes and calls the callback whenever auth state changes.
  * Used to reactively update UI when user signs in/out.
+ * 
+ * If Firebase is not initialized (config missing), immediately calls callback with null
+ * to allow UI to show "not authenticated" state instead of loading forever.
  *
  * @param callback - Function to call with the current User or null
  * @returns Unsubscribe function; call to stop listening for changes
@@ -254,9 +284,17 @@ export async function signOut(): Promise<boolean> {
  * unsubscribe();
  */
 export function onAuthChange(callback: (user: User | null) => void): () => void {
-  if (!auth) initFirebase();
-  if (!auth) {
-    console.warn('[Firebase] Auth not initialized for listener');
+  // Try to initialize Firebase
+  const initialized = initFirebase();
+  
+  if (!initialized || !auth) {
+    console.warn('[Firebase] Firebase not initialized; assuming user is not authenticated');
+    // Immediately call callback with null to prevent infinite loading
+    // Schedule in next tick to ensure caller has finished setting up the subscription
+    setTimeout(() => {
+      callback(null);
+    }, 0);
+    // Return no-op unsubscribe function
     return () => {};
   }
 

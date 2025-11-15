@@ -36,14 +36,29 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   /**
    * Check authentication status on mount and subscribe to changes.
    * Redirect to /auth if user is not authenticated (except when already on /auth).
+   * Timeout after 5 seconds to prevent infinite loading (e.g., if Firebase config is missing).
    */
   useEffect(() => {
     setMounted(true);
+
+    // Safety timeout: if auth check takes more than 5 seconds, assume user is not authenticated
+    // This prevents infinite loading on Vercel if Firebase environment variables are not configured
+    const timeoutId = setTimeout(() => {
+      if (authLoading) {
+        console.warn('[AppLayout] Auth check timeout - assuming user not authenticated');
+        setAuthLoading(false);
+        // If not on /auth or home, redirect to /auth
+        if (pathname !== '/auth' && pathname !== '/') {
+          router.push('/auth');
+        }
+      }
+    }, 5000);
 
     // Subscribe to auth state changes
     const unsubscribe = onAuthChange((currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
+      clearTimeout(timeoutId);
 
       // Only redirect if:
       // 1. User is NOT authenticated
@@ -56,6 +71,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      clearTimeout(timeoutId);
       if (unsubscribe && typeof unsubscribe === 'function') {
         unsubscribe();
       }
