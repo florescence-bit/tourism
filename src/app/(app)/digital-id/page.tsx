@@ -180,7 +180,7 @@ export default function DigitalID() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <div className="bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800 border border-gray-500/30 rounded-2xl p-8 aspect-video flex flex-col justify-between shadow-elevation3">
+            <div className="bg-gray-700 border border-gray-600/50 rounded-2xl p-8 aspect-video flex flex-col justify-between shadow-elevation3">
               <div className="flex justify-between items-start">
                 <div>
                   <div className="text-xs text-text-secondary font-mono tracking-wider">RAH DIGITAL ID</div>
