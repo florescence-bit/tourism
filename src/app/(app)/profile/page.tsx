@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, LogOut, Save, QrCode } from 'lucide-react';
-import { onAuthChange, getProfile, saveProfile, signOut, generateAndSaveDigitalId } from '@/lib/firebaseClient';
+import { AlertCircle, LogOut, Save, Edit2 } from 'lucide-react';
+import { onAuthChange, getProfile, saveProfile, signOut } from '@/lib/firebaseClient';
 
 type Profile = {
   fullName?: string;
@@ -17,9 +17,9 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [generatingId, setGeneratingId] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     fullName: '',
     email: '',
@@ -44,6 +44,8 @@ export default function ProfilePage() {
               documentType: userProfile.documentType || '',
               documentNumber: userProfile.documentNumber || '',
             });
+            setProfileExists(true);
+            setIsEditing(false);
           } else {
             // If no profile exists, initialize with auth email
             setProfile({
@@ -54,6 +56,8 @@ export default function ProfilePage() {
               documentType: '',
               documentNumber: '',
             });
+            setProfileExists(false);
+            setIsEditing(true);
           }
         } catch (err) {
           console.error('[Profile] Error loading profile:', err);
@@ -66,6 +70,8 @@ export default function ProfilePage() {
             documentType: '',
             documentNumber: '',
           });
+          setProfileExists(false);
+          setIsEditing(true);
         } finally {
           setLoading(false);
         }
@@ -133,40 +139,10 @@ export default function ProfilePage() {
         documentType: '',
         documentNumber: '',
       });
-      setQrCode(null);
       setMessage('✓ Signed out successfully');
     } catch (error: any) {
       console.error('[Profile] Sign out error:', error);
       setMessage(`Error: ${error.message}`);
-    }
-  };
-
-  const handleGenerateDigitalID = async () => {
-    if (!user || !profile.fullName) {
-      setMessage('Please fill in your full name first');
-      return;
-    }
-
-    setGeneratingId(true);
-    setMessage(null);
-
-    try {
-      console.log('[Profile] Generating digital ID for:', profile.fullName);
-      const result = await generateAndSaveDigitalId(user.uid, profile.fullName);
-      
-      if (result && result.qrDataUrl) {
-        console.log('[Profile] Digital ID generated successfully');
-        setQrCode(result.qrDataUrl);
-        setMessage('✓ Digital ID generated successfully!');
-        setTimeout(() => setMessage(null), 3000);
-      } else {
-        setMessage('Failed to generate Digital ID. Check console for details.');
-      }
-    } catch (error: any) {
-      console.error('[Profile] Digital ID generation error:', error);
-      setMessage(`Error: ${error.message}`);
-    } finally {
-      setGeneratingId(false);
     }
   };
 
@@ -210,7 +186,9 @@ export default function ProfilePage() {
       <div className="w-full max-w-2xl">
         <div className="mb-8 text-center">
           <h1 className="text-headline text-white mb-2">Profile</h1>
-          <p className="text-subtitle text-text-secondary">Manage your account information</p>
+          <p className="text-subtitle text-text-secondary">
+            {isEditing ? 'Update your account information' : 'Your account information'}
+          </p>
         </div>
 
         {message && (
@@ -230,152 +208,177 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSave();
-          }}
-          className="card-base p-8 space-y-6 mb-6 border border-surface-secondary/50"
-        >
-          <div className="pb-6 border-b border-surface-secondary/50">
-            <p className="text-sm text-text-secondary font-medium mb-2">Email</p>
-            <p className="text-lg font-semibold text-white">{user.email || 'No email'}</p>
-          </div>
+        {/* VIEW MODE - Display Profile Details */}
+        {!isEditing && profileExists && (
+          <div className="card-base p-8 space-y-6 mb-6 border border-surface-secondary/50">
+            <div className="pb-6 border-b border-surface-secondary/50">
+              <p className="text-sm text-text-secondary font-medium mb-2">Email</p>
+              <p className="text-lg font-semibold text-white">{user.email || 'No email'}</p>
+            </div>
 
-          <div>
-            <label htmlFor="fullName" className="block text-sm font-semibold text-white mb-3">
-              Full Name <span className="text-accent-red">*</span>
-            </label>
-            <input
-              id="fullName"
-              type="text"
-              required
-              value={profile.fullName || ''}
-              onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-              disabled={saving}
-              placeholder="Your full name"
-              className="input-base w-full"
-            />
-          </div>
+            <div>
+              <p className="text-sm text-text-secondary font-medium mb-2">Full Name</p>
+              <p className="text-lg font-semibold text-white">{profile.fullName || '—'}</p>
+            </div>
 
-          <div>
-            <label htmlFor="age" className="block text-sm font-semibold text-white mb-3">
-              Age <span className="text-accent-red">*</span>
-            </label>
-            <input
-              id="age"
-              type="number"
-              required
-              value={profile.age || ''}
-              onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
-              disabled={saving}
-              min="18"
-              max="120"
-              placeholder="Your age (minimum 18)"
-              className="input-base w-full"
-            />
-          </div>
+            <div>
+              <p className="text-sm text-text-secondary font-medium mb-2">Age</p>
+              <p className="text-lg font-semibold text-white">{profile.age || '—'}</p>
+            </div>
 
-          <div>
-            <label htmlFor="userType" className="block text-sm font-semibold text-white mb-3">
-              User Type
-            </label>
-            <select
-              id="userType"
-              value={profile.userType || ''}
-              onChange={(e) => setProfile({ ...profile, userType: e.target.value })}
-              disabled={saving}
-              className="input-base w-full"
-            >
-              <option value="">Select type...</option>
-              <option value="Indian">Indian Citizen</option>
-              <option value="Foreigner">Foreigner</option>
-            </select>
-          </div>
+            <div>
+              <p className="text-sm text-text-secondary font-medium mb-2">User Type</p>
+              <p className="text-lg font-semibold text-white">{profile.userType || '—'}</p>
+            </div>
 
-          <div>
-            <label htmlFor="documentType" className="block text-sm font-semibold text-white mb-3">
-              Document Type
-            </label>
-            <select
-              id="documentType"
-              value={profile.documentType || ''}
-              onChange={(e) => setProfile({ ...profile, documentType: e.target.value })}
-              disabled={saving}
-              className="input-base w-full"
-            >
-              <option value="">Select document...</option>
-              {profile.userType === 'Indian' ? (
-                <option value="Aadhar">Aadhar Card</option>
-              ) : profile.userType === 'Foreigner' ? (
-                <>
-                  <option value="Passport">Passport</option>
-                  <option value="Visa">Visa</option>
-                </>
-              ) : null}
-            </select>
-          </div>
+            <div>
+              <p className="text-sm text-text-secondary font-medium mb-2">Document Type</p>
+              <p className="text-lg font-semibold text-white">{profile.documentType || '—'}</p>
+            </div>
 
-          <div>
-            <label
-              htmlFor="documentNumber"
-              className="block text-sm font-semibold text-white mb-3"
-            >
-              Document Number
-            </label>
-            <input
-              id="documentNumber"
-              type="text"
-              value={profile.documentNumber || ''}
-              onChange={(e) => setProfile({ ...profile, documentNumber: e.target.value })}
-              disabled={saving}
-              placeholder="Your document number"
-              className="input-base w-full"
-            />
-          </div>
+            <div>
+              <p className="text-sm text-text-secondary font-medium mb-2">Document Number</p>
+              <p className="text-lg font-semibold text-white">{profile.documentNumber || '—'}</p>
+            </div>
 
-          <div className="pt-6 border-t border-surface-secondary/50 flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
-            >
-              <Save size={20} />
-              {saving ? 'Saving...' : 'Save Profile'}
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateDigitalID}
-              disabled={generatingId || !profile.fullName}
-              className="btn-secondary flex-1 flex items-center justify-center gap-2"
-            >
-              <QrCode size={20} className={generatingId ? 'animate-spin' : ''} />
-              {generatingId ? 'Generating...' : 'Generate ID'}
-            </button>
-          </div>
-        </form>
-
-        {qrCode && (
-          <div className="card-base p-8 mb-6 border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
-            <h3 className="text-lg font-semibold text-white mb-4">Your Digital ID QR Code</h3>
-            <div className="flex flex-col items-center gap-4">
-              <img
-                src={qrCode}
-                alt="Digital ID QR Code"
-                className="w-48 h-48 rounded-lg bg-white p-3 border border-accent-blue/30"
-              />
-              <p className="text-sm text-text-secondary text-center max-w-sm">
-                Scan this QR code to verify your digital identity. Valid for 3 years from generation.
-              </p>
-              <a
-                href={qrCode}
-                download={`${profile.fullName || 'digital-id'}-qr.png`}
-                className="btn-secondary flex items-center gap-2"
+            <div className="pt-6 border-t border-surface-secondary/50 flex gap-3">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
-                Download QR Code
-              </a>
+                <Edit2 size={20} />
+                Edit Profile
+              </button>
             </div>
           </div>
+        )}
+
+        {/* EDIT MODE - Display Form */}
+        {isEditing && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+            className="card-base p-8 space-y-6 mb-6 border border-surface-secondary/50"
+          >
+            <div className="pb-6 border-b border-surface-secondary/50">
+              <p className="text-sm text-text-secondary font-medium mb-2">Email</p>
+              <p className="text-lg font-semibold text-white">{user.email || 'No email'}</p>
+            </div>
+
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-semibold text-white mb-3">
+                Full Name <span className="text-accent-red">*</span>
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                required
+                value={profile.fullName || ''}
+                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                disabled={saving}
+                placeholder="Your full name"
+                className="input-base w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="age" className="block text-sm font-semibold text-white mb-3">
+                Age <span className="text-accent-red">*</span>
+              </label>
+              <input
+                id="age"
+                type="number"
+                required
+                value={profile.age || ''}
+                onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 0 })}
+                disabled={saving}
+                min="18"
+                max="120"
+                placeholder="Your age (minimum 18)"
+                className="input-base w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="userType" className="block text-sm font-semibold text-white mb-3">
+                User Type
+              </label>
+              <select
+                id="userType"
+                value={profile.userType || ''}
+                onChange={(e) => setProfile({ ...profile, userType: e.target.value })}
+                disabled={saving}
+                className="input-base w-full"
+              >
+                <option value="">Select type...</option>
+                <option value="Indian">Indian Citizen</option>
+                <option value="Foreigner">Foreigner</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="documentType" className="block text-sm font-semibold text-white mb-3">
+                Document Type
+              </label>
+              <select
+                id="documentType"
+                value={profile.documentType || ''}
+                onChange={(e) => setProfile({ ...profile, documentType: e.target.value })}
+                disabled={saving}
+                className="input-base w-full"
+              >
+                <option value="">Select document...</option>
+                {profile.userType === 'Indian' ? (
+                  <option value="Aadhar">Aadhar Card</option>
+                ) : profile.userType === 'Foreigner' ? (
+                  <>
+                    <option value="Passport">Passport</option>
+                    <option value="Visa">Visa</option>
+                  </>
+                ) : null}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="documentNumber"
+                className="block text-sm font-semibold text-white mb-3"
+              >
+                Document Number
+              </label>
+              <input
+                id="documentNumber"
+                type="text"
+                value={profile.documentNumber || ''}
+                onChange={(e) => setProfile({ ...profile, documentNumber: e.target.value })}
+                disabled={saving}
+                placeholder="Your document number"
+                className="input-base w-full"
+              />
+            </div>
+
+            <div className="pt-6 border-t border-surface-secondary/50 flex gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <Save size={20} />
+                {saving ? 'Saving...' : 'Save Profile'}
+              </button>
+              {profileExists && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
         )}
 
         <button
