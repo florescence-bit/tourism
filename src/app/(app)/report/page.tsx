@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, Send, MapPin } from 'lucide-react';
-import { onAuthChange, saveReport } from '@/lib/firebaseClient';
+import { AlertCircle, Send, MapPin, User } from 'lucide-react';
+import { onAuthChange, saveReport, getProfile } from '@/lib/firebaseClient';
 
 export default function ReportPage() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -16,8 +17,16 @@ export default function ReportPage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((u) => {
+    const unsubscribe = onAuthChange(async (u) => {
       setUser(u);
+      if (u) {
+        try {
+          const userProfile = await getProfile(u.uid);
+          setProfile(userProfile || {});
+        } catch (err) {
+          console.error('[Report] Error loading profile:', err);
+        }
+      }
       setLoading(false);
     });
     return () => {
@@ -91,9 +100,23 @@ export default function ReportPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-2xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-headline text-white mb-2">Report</h1>
-          <p className="text-subtitle text-text-secondary">File a safety report</p>
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h1 className="text-headline text-white mb-2">Report</h1>
+            <p className="text-subtitle text-text-secondary">File a safety report</p>
+          </div>
+          
+          {profile?.fullName && (
+            <div className="card-base p-4 border border-accent-green/30 bg-gradient-to-r from-accent-green/10 to-transparent flex items-center gap-3 mb-6">
+              <div className="p-3 bg-surface-secondary rounded-lg">
+                <User size={20} className="text-accent-green" />
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Report filed by</p>
+                <p className="text-white font-semibold">{profile.fullName}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {message && (

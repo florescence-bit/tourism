@@ -1,9 +1,9 @@
 "use client";
 
-import { MapPin, Map, Clock, Navigation, AlertCircle } from 'lucide-react';
+import { MapPin, Map, Clock, Navigation, AlertCircle, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { saveCheckIn, listCheckIns, onAuthChange } from '@/lib/firebaseClient';
+import { saveCheckIn, listCheckIns, onAuthChange, getProfile } from '@/lib/firebaseClient';
 import GeofenceManager from '../../../components/geofence/GeofenceManager';
 
 const SimpleMap = dynamic<any>(() => import('@/components/map/SimpleMap'), { 
@@ -14,6 +14,7 @@ const AnySimpleMap = SimpleMap as any;
 
 export default function CheckIn() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,9 +33,15 @@ export default function CheckIn() {
   }>>([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((u) => {
+    const unsubscribe = onAuthChange(async (u) => {
       setUser(u);
       if (u) {
+        try {
+          const userProfile = await getProfile(u.uid);
+          setProfile(userProfile || {});
+        } catch (err) {
+          console.error('[CheckIn] Error loading profile:', err);
+        }
         loadCheckInHistory(u.uid);
       }
     });
@@ -164,9 +171,23 @@ export default function CheckIn() {
   return (
     <div className="min-h-screen flex flex-col p-4 py-8">
       <div className="max-w-6xl mx-auto w-full">
-        <div className="mb-8 text-center">
-          <h1 className="text-headline text-white mb-2">Check In</h1>
-          <p className="text-subtitle text-text-secondary">Share your location for safety</p>
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h1 className="text-headline text-white mb-2">Check In</h1>
+            <p className="text-subtitle text-text-secondary">Share your location for safety</p>
+          </div>
+          
+          {profile?.fullName && (
+            <div className="card-base p-4 border border-accent-blue/30 bg-gradient-to-r from-accent-blue/10 to-transparent flex items-center gap-3">
+              <div className="p-3 bg-surface-secondary rounded-lg">
+                <User size={20} className="text-accent-blue" />
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Checking in as</p>
+                <p className="text-white font-semibold">{profile.fullName}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {message && (

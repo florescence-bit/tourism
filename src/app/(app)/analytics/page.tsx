@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, Shield } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertCircle, Shield, User } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { onAuthChange, getUserAnalytics } from '@/lib/firebaseClient';
+import { onAuthChange, getUserAnalytics, getProfile } from '@/lib/firebaseClient';
 
 export default function Analytics() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<Record<string, any>>({
     totalCheckIns: 0,
@@ -25,6 +26,9 @@ export default function Analytics() {
         try {
           const data = await getUserAnalytics(u.uid);
           setAnalytics(data);
+          
+          const userProfile = await getProfile(u.uid);
+          setProfile(userProfile || {});
         } catch (err) {
           console.error('[Analytics] Error loading analytics:', err);
         } finally {
@@ -78,9 +82,23 @@ export default function Analytics() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-5xl">
-        <div className="mb-8 text-center">
-          <h1 className="text-headline text-white mb-2">Analytics</h1>
-          <p className="text-subtitle text-text-secondary">Your safety insights</p>
+        <div className="mb-8">
+          <div className="text-center mb-6">
+            <h1 className="text-headline text-white mb-2">Analytics</h1>
+            <p className="text-subtitle text-text-secondary">Your safety insights</p>
+          </div>
+          
+          {profile?.fullName && (
+            <div className="card-base p-4 border border-accent-purple/30 bg-gradient-to-r from-accent-purple/10 to-transparent flex items-center gap-3">
+              <div className="p-3 bg-surface-secondary rounded-lg">
+                <User size={20} className="text-accent-purple" />
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary">Analytics for</p>
+                <p className="text-white font-semibold">{profile.fullName}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

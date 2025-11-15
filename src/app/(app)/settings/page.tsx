@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, Bell, Lock, Eye } from 'lucide-react';
-import { onAuthChange } from '@/lib/firebaseClient';
+import { AlertCircle, Bell, Lock, Eye, User, Briefcase, FileText } from 'lucide-react';
+import { onAuthChange, getProfile } from '@/lib/firebaseClient';
 
 type Settings = {
   emailNotifications: boolean;
@@ -13,6 +13,7 @@ type Settings = {
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings>({
     emailNotifications: true,
@@ -22,8 +23,16 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthChange((u) => {
+    const unsubscribe = onAuthChange(async (u) => {
       setUser(u);
+      if (u) {
+        try {
+          const userProfile = await getProfile(u.uid);
+          setProfile(userProfile || {});
+        } catch (err) {
+          console.error('[Settings] Error loading profile:', err);
+        }
+      }
       setLoading(false);
     });
     return () => {
@@ -172,10 +181,44 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-8 card-base p-6 border border-surface-secondary/50">
-          <h2 className="text-lg font-semibold text-white mb-3">Account Info</h2>
-          <div className="space-y-2 text-sm">
-            <p className="text-text-secondary">Email: <span className="text-white">{user.email}</span></p>
-            <p className="text-text-secondary">User ID: <span className="text-white font-mono text-xs">{user.uid}</span></p>
+          <h2 className="text-lg font-semibold text-white mb-4">Account Info</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="pb-4 border-b border-surface-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <User size={16} className="text-accent-blue" />
+                <p className="text-xs text-text-secondary">Full Name</p>
+              </div>
+              <p className="text-sm font-semibold text-white">{profile?.fullName || '—'}</p>
+            </div>
+            
+            <div className="pb-4 border-b border-surface-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={16} className="text-accent-purple" />
+                <p className="text-xs text-text-secondary">Age</p>
+              </div>
+              <p className="text-sm font-semibold text-white">{profile?.age || '—'}</p>
+            </div>
+            
+            <div className="pb-4 border-b border-surface-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <Briefcase size={16} className="text-accent-green" />
+                <p className="text-xs text-text-secondary">User Type</p>
+              </div>
+              <p className="text-sm font-semibold text-white">{profile?.userType || '—'}</p>
+            </div>
+            
+            <div className="pb-4 border-b border-surface-secondary/50">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={16} className="text-accent-orange" />
+                <p className="text-xs text-text-secondary">Document Type</p>
+              </div>
+              <p className="text-sm font-semibold text-white">{profile?.documentType || '—'}</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-surface-secondary/50 space-y-2 text-sm">
+            <p className="text-text-secondary">Email: <span className="text-white">{user?.email}</span></p>
+            <p className="text-text-secondary">User ID: <span className="text-white font-mono text-xs break-all">{user?.uid}</span></p>
           </div>
         </div>
       </div>
