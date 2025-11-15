@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, LogOut, Save } from 'lucide-react';
-import { onAuthChange, getProfile, saveProfile, signOut } from '@/lib/firebaseClient';
+import { AlertCircle, LogOut, Save, QrCode } from 'lucide-react';
+import { onAuthChange, getProfile, saveProfile, signOut, generateAndSaveDigitalId } from '@/lib/firebaseClient';
 
 type Profile = {
   fullName?: string;
@@ -17,7 +17,9 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingId, setGeneratingId] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>({
     fullName: '',
     email: '',
@@ -131,10 +133,40 @@ export default function ProfilePage() {
         documentType: '',
         documentNumber: '',
       });
+      setQrCode(null);
       setMessage('✓ Signed out successfully');
     } catch (error: any) {
       console.error('[Profile] Sign out error:', error);
       setMessage(`Error: ${error.message}`);
+    }
+  };
+
+  const handleGenerateDigitalID = async () => {
+    if (!user || !profile.fullName) {
+      setMessage('Please fill in your full name first');
+      return;
+    }
+
+    setGeneratingId(true);
+    setMessage(null);
+
+    try {
+      console.log('[Profile] Generating digital ID for:', profile.fullName);
+      const result = await generateAndSaveDigitalId(user.uid, profile.fullName);
+      
+      if (result && result.qrDataUrl) {
+        console.log('[Profile] Digital ID generated successfully');
+        setQrCode(result.qrDataUrl);
+        setMessage('✓ Digital ID generated successfully!');
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage('Failed to generate Digital ID. Check console for details.');
+      }
+    } catch (error: any) {
+      console.error('[Profile] Digital ID generation error:', error);
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setGeneratingId(false);
     }
   };
 
@@ -311,8 +343,40 @@ export default function ProfilePage() {
               <Save size={20} />
               {saving ? 'Saving...' : 'Save Profile'}
             </button>
+            <button
+              type="button"
+              onClick={handleGenerateDigitalID}
+              disabled={generatingId || !profile.fullName}
+              className="btn-secondary flex-1 flex items-center justify-center gap-2"
+            >
+              <QrCode size={20} className={generatingId ? 'animate-spin' : ''} />
+              {generatingId ? 'Generating...' : 'Generate ID'}
+            </button>
           </div>
         </form>
+
+        {qrCode && (
+          <div className="card-base p-8 mb-6 border border-accent-blue/30 bg-gradient-to-br from-accent-blue/10 to-transparent">
+            <h3 className="text-lg font-semibold text-white mb-4">Your Digital ID QR Code</h3>
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src={qrCode}
+                alt="Digital ID QR Code"
+                className="w-48 h-48 rounded-lg bg-white p-3 border border-accent-blue/30"
+              />
+              <p className="text-sm text-text-secondary text-center max-w-sm">
+                Scan this QR code to verify your digital identity. Valid for 3 years from generation.
+              </p>
+              <a
+                href={qrCode}
+                download={`${profile.fullName || 'digital-id'}-qr.png`}
+                className="btn-secondary flex items-center gap-2"
+              >
+                Download QR Code
+              </a>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleSignOut}

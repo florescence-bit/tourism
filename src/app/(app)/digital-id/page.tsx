@@ -48,14 +48,20 @@ export default function DigitalID() {
     setMessage(null);
 
     try {
-      const digitalId = await generateAndSaveDigitalId(user.uid, profile.fullName);
-      if (digitalId) {
-        const updated = await getProfile(user.uid);
-        if (updated?.qrDataUrl) {
-          setQrCode(updated.qrDataUrl);
-          setMessage('✓ Digital ID generated successfully!');
-          setTimeout(() => setMessage(null), 3000);
-        }
+      console.log('[Digital ID] Starting generation for user:', user.uid);
+      console.log('[Digital ID] Profile name:', profile.fullName);
+      
+      const result = await generateAndSaveDigitalId(user.uid, profile.fullName);
+      console.log('[Digital ID] Generation result:', result);
+      
+      if (result && result.qrDataUrl) {
+        console.log('[Digital ID] QR code generated, updating state');
+        setQrCode(result.qrDataUrl);
+        setMessage('✓ Digital ID generated successfully!');
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        console.error('[Digital ID] No QR data URL in result');
+        setMessage('Failed to generate Digital ID. Check console for details.');
       }
     } catch (err: any) {
       console.error('[Digital ID] Error:', err);
