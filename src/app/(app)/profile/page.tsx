@@ -36,15 +36,34 @@ export default function ProfilePage() {
           if (userProfile) {
             setProfile({
               fullName: userProfile.fullName || '',
-              email: userProfile.email || '',
+              email: u.email || userProfile.email || '',
               age: userProfile.age || 0,
               userType: userProfile.userType || '',
               documentType: userProfile.documentType || '',
               documentNumber: userProfile.documentNumber || '',
             });
+          } else {
+            // If no profile exists, initialize with auth email
+            setProfile({
+              fullName: '',
+              email: u.email || '',
+              age: 0,
+              userType: '',
+              documentType: '',
+              documentNumber: '',
+            });
           }
         } catch (err) {
           console.error('[Profile] Error loading profile:', err);
+          // Initialize with auth email if error occurs
+          setProfile({
+            fullName: '',
+            email: u.email || '',
+            age: 0,
+            userType: '',
+            documentType: '',
+            documentNumber: '',
+          });
         } finally {
           setLoading(false);
         }
@@ -72,12 +91,26 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      const success = await saveProfile(user.uid, profile);
+      // Ensure email from auth user is saved
+      const profileToSave = {
+        ...profile,
+        email: user.email || profile.email,
+        updatedAt: Date.now(),
+      };
+      
+      console.log('[Profile] Saving profile with data:', profileToSave);
+      console.log('[Profile] User UID:', user.uid);
+      
+      const success = await saveProfile(user.uid, profileToSave);
+      console.log('[Profile] Save result:', success);
+      
       if (success) {
         setMessage('✓ Profile saved successfully!');
+        // Update local state to reflect the saved data
+        setProfile(profileToSave);
         setTimeout(() => setMessage(null), 3000);
       } else {
-        setMessage('Failed to save profile. Please try again.');
+        setMessage('Failed to save profile. Check console for details.');
       }
     } catch (error: any) {
       console.error('[Profile] Error:', error);

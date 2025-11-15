@@ -307,7 +307,10 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
     return () => {};
   }
 
-  return onAuthStateChanged(auth, callback);
+  return onAuthStateChanged(auth, (user) => {
+    console.log('[Firebase] Auth state changed:', user ? `User ${user.uid} authenticated` : 'User signed out');
+    callback(user);
+  });
 }
 
 /**
@@ -340,18 +343,27 @@ export async function sendVerificationEmail(user: User): Promise<boolean> {
  * @returns Promise resolving to profile data object, or null if not found or error occurs
  */
 export async function getProfile(uid: string): Promise<Record<string, any> | null> {
-  if (!db) initFirebase();
+  console.log('[Firebase] getProfile called with uid:', uid);
+  
   if (!db) {
-    console.warn('[Firebase] Firestore not available for getProfile');
+    console.log('[Firebase] db is null, initializing Firebase');
+    initFirebase();
+  }
+  
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for getProfile - initialization failed');
     return null;
   }
 
   try {
+    console.log('[Firebase] Getting profile document from /profiles/' + uid);
     const ref = doc(db, 'profiles', uid);
     const snap: DocumentSnapshot = await getDoc(ref);
-    return snap.exists() ? snap.data() : null;
+    const data = snap.exists() ? snap.data() : null;
+    console.log('[Firebase] getProfile result:', data ? 'found' : 'not found', data);
+    return data;
   } catch (error: any) {
-    console.error('[Firebase] getProfile error:', error);
+    console.error('[Firebase] getProfile error:', error.message, error.code);
     return null;
   }
 }
@@ -366,18 +378,26 @@ export async function getProfile(uid: string): Promise<Record<string, any> | nul
  * @returns Promise resolving to true if successful, false otherwise
  */
 export async function saveProfile(uid: string, profile: Record<string, any>): Promise<boolean> {
-  if (!db) initFirebase();
+  console.log('[Firebase] saveProfile called with uid:', uid);
+  
   if (!db) {
-    console.warn('[Firebase] Firestore not available for saveProfile');
+    console.log('[Firebase] db is null, initializing Firebase');
+    initFirebase();
+  }
+  
+  if (!db) {
+    console.warn('[Firebase] Firestore not available for saveProfile - initialization failed');
     return false;
   }
 
   try {
+    console.log('[Firebase] Setting profile document at /profiles/' + uid, profile);
     const ref = doc(db, 'profiles', uid);
     await setDoc(ref, profile, { merge: true });
+    console.log('[Firebase] Profile saved successfully');
     return true;
   } catch (error: any) {
-    console.error('[Firebase] saveProfile error:', error);
+    console.error('[Firebase] saveProfile error:', error.message, error.code);
     return false;
   }
 }
