@@ -24,6 +24,7 @@ import {
   signInWithGoogle,
   signInWithGithub,
   generateAndSaveDigitalId,
+  saveProfile,
 } from '@/lib/firebaseClient';
 import { formatErrorForDisplay, extractFirebaseErrorCode } from '@/lib/errorMap';
 import { MIN_PASSWORD_LENGTH, EMAIL_REGEX } from '@/lib/constants';
@@ -94,6 +95,21 @@ export default function AuthPage() {
   /** Password confirmation (signup only) */
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  /** Full name (signup only) */
+  const [fullName, setFullName] = useState('');
+
+  /** Age (signup only) */
+  const [age, setAge] = useState('');
+
+  /** User type: 'indian' or 'foreigner' (signup only) */
+  const [userType, setUserType] = useState<'indian' | 'foreigner' | ''>('');
+
+  /** Document type: 'aadhar', 'visa', or 'passport' (signup only) */
+  const [documentType, setDocumentType] = useState<'aadhar' | 'visa' | 'passport' | ''>('');
+
+  /** Document number / ID (signup only) */
+  const [documentNumber, setDocumentNumber] = useState('');
+
   /** True while request is in flight */
   const [loading, setLoading] = useState(false);
 
@@ -150,7 +166,7 @@ export default function AuthPage() {
   const isValidPassword = (): boolean => password.length >= MIN_PASSWORD_LENGTH;
 
   /**
-   * Validates that signup form fields are consistent.
+   * Validates that signup form fields are consistent and complete.
    * @returns true if form is valid, false otherwise
    */
   const isValidSignupForm = (): boolean => {
@@ -164,6 +180,26 @@ export default function AuthPage() {
     }
     if (password !== confirmPassword) {
       setMessage('Passwords do not match.');
+      return false;
+    }
+    if (!fullName.trim()) {
+      setMessage('Please enter your full name.');
+      return false;
+    }
+    if (!age || isNaN(parseInt(age)) || parseInt(age) < 18) {
+      setMessage('Please enter a valid age (18 or older).');
+      return false;
+    }
+    if (!userType) {
+      setMessage('Please select whether you are an Indian citizen or foreigner.');
+      return false;
+    }
+    if (!documentType) {
+      setMessage('Please select a document type for verification.');
+      return false;
+    }
+    if (!documentNumber.trim()) {
+      setMessage('Please enter your document number.');
       return false;
     }
     return true;
@@ -197,7 +233,21 @@ export default function AuthPage() {
         // Attempt sign-up
         console.debug('[Auth] Signing up with email:', email);
         const newUser = await signUpWithEmail(email, password);
-        setMessage(`✓ Account created successfully! Welcome, ${newUser.email || newUser.uid}`);
+        
+        // Save profile with additional details to Firestore
+        const profileData = {
+          email,
+          fullName,
+          age: parseInt(age),
+          userType,
+          documentType,
+          documentNumber,
+          displayName: fullName,
+          createdAt: Date.now(),
+        };
+        await saveProfile(newUser.uid, profileData);
+        
+        setMessage(`✓ Account created successfully! Welcome, ${fullName}`);
 
         // Send verification email (non-blocking)
         try {
@@ -218,6 +268,11 @@ export default function AuthPage() {
         setEmail('');
         setPassword('');
         setConfirmPassword('');
+        setFullName('');
+        setAge('');
+        setUserType('');
+        setDocumentType('');
+        setDocumentNumber('');
       } else {
         // Sign-in mode
         if (!isValidPassword()) {
@@ -513,6 +568,124 @@ export default function AuthPage() {
                     placeholder="••••••••"
                     required
                     minLength={MIN_PASSWORD_LENGTH}
+                  />
+                </div>
+              )}
+
+              {/* Full Name (Signup Only) */}
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Full Name</label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    disabled={loading}
+                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Age (Signup Only) */}
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Age</label>
+                  <input
+                    type="number"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    disabled={loading}
+                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    placeholder="25"
+                    min="18"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* User Type (Signup Only) */}
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2 font-semibold">Are you an Indian citizen?</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setUserType('indian')}
+                      disabled={loading}
+                      className={`flex-1 h-10 rounded-lg font-medium transition ${
+                        userType === 'indian'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-900 text-gray-300 border border-gray-700 hover:text-white'
+                      }`}
+                    >
+                      Yes (Indian)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserType('foreigner')}
+                      disabled={loading}
+                      className={`flex-1 h-10 rounded-lg font-medium transition ${
+                        userType === 'foreigner'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-900 text-gray-300 border border-gray-700 hover:text-white'
+                      }`}
+                    >
+                      No (Foreigner)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Document Type (Signup Only) */}
+              {mode === 'signup' && userType && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2 font-semibold">
+                    {userType === 'indian' ? 'Document Type' : 'Visa / Passport'}
+                  </label>
+                  <select
+                    value={documentType}
+                    onChange={(e) => setDocumentType(e.target.value as 'aadhar' | 'visa' | 'passport')}
+                    disabled={loading}
+                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition"
+                    required
+                  >
+                    <option value="">Select a document...</option>
+                    {userType === 'indian' ? (
+                      <option value="aadhar">Aadhar Card</option>
+                    ) : (
+                      <>
+                        <option value="passport">Passport</option>
+                        <option value="visa">Visa</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* Document Number (Signup Only) */}
+              {mode === 'signup' && documentType && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2 font-semibold">
+                    {documentType === 'aadhar'
+                      ? 'Aadhar Number'
+                      : documentType === 'passport'
+                        ? 'Passport Number'
+                        : 'Visa Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={documentNumber}
+                    onChange={(e) => setDocumentNumber(e.target.value)}
+                    disabled={loading}
+                    className="w-full h-12 px-4 rounded-xl bg-gray-900 text-white border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition placeholder-gray-600"
+                    placeholder={
+                      documentType === 'aadhar'
+                        ? 'XXXX XXXX XXXX'
+                        : 'A1234567'
+                    }
+                    required
                   />
                 </div>
               )}

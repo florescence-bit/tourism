@@ -69,6 +69,21 @@ export interface UserProfile {
   /** User's profile picture URL (optional) */
   photoURL?: string;
 
+  /** User's full name (required on sign-up) */
+  fullName?: string;
+
+  /** User's age (optional) */
+  age?: number;
+
+  /** User type: 'indian' or 'foreigner' */
+  userType?: 'indian' | 'foreigner';
+
+  /** Document type for verification: 'aadhar' (Indian) or 'visa' | 'passport' (Foreigner) */
+  documentType?: 'aadhar' | 'visa' | 'passport';
+
+  /** Document number (e.g., Aadhar number, Visa number) */
+  documentNumber?: string;
+
   /** Last known latitude */
   lastLat?: number;
 
