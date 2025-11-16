@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * RAH Tourist Guide API Endpoint
@@ -28,108 +27,106 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Gemini client
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // Build the conversation for Gemini
+    const systemPrompt = `You are RAH (Reliable Assistance & Hospitality), an expert Indian tourism guide AI assistant. You provide comprehensive, accurate, and helpful information about Indian destinations, cultural sites, safety tips, local transportation, cuisine, and travel planning. Be warm, welcoming, and enthusiastic about Indian culture. Use appropriate greetings and emojis. Always prioritize tourist safety.`;
 
-    // System prompt for RAH Tourist Guide
-    const systemPrompt = `You are RAH (Reliable Assistance & Hospitality), an expert Indian tourism guide AI assistant. You provide comprehensive, accurate, and helpful information about:
-
-🇮🇳 SPECIALIZATION:
-- Indian destinations, monuments, and cultural sites (Taj Mahal, Jaipur, Goa, Kerala, Himalayas, etc.)
-- Historical and cultural significance of Indian places
-- Best times to visit different regions
-- Local transportation options and travel tips
-- Indian cuisine, customs, and traditions
-- Safety recommendations for tourists
-- Budget travel planning and accommodation advice
-- Local experiences and hidden gems
-- Travel documents and visa information
-- Weather and seasonal information
-
-✨ PERSONALITY:
-- Warm, welcoming, and enthusiastic about Indian culture
-- Use appropriate greetings like "नमस्ते" (Namaste)
-- Provide detailed, accurate information
-- Include practical tips and local recommendations
-- Be respectful of Indian traditions and customs
-- Use emojis appropriately to make responses engaging
-
-🎯 COMMUNICATION STYLE:
-- Answer in the language the user uses (English, Hindi, etc.)
-- Provide structured information with bullet points when helpful
-- Include estimated costs, times, and distances when relevant
-- Suggest alternative options and hidden gems
-- Prioritize tourist safety and comfort
-- Respect cultural sensitivities
-
-⚠️ IMPORTANT:
-- Always prioritize tourist safety
-- Recommend official channels for visas and documents
-- Suggest current travel advisories when relevant
-- Be honest about limitations and recommend expert consultation for complex issues`;
-
-    // Get the generative model
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro',
-    });
-
-    // Build conversation history for context
-    const history = conversationHistory.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }],
-    }));
-
-    // Start a chat session with history
-    const chat = model.startChat({
-      history: history,
-    });
-
-    // Prepend system prompt to user message for context
-    const fullMessage = `${systemPrompt}\n\nUser Query: ${message}`;
-
-    // Send the user message
-    const result = await chat.sendMessage(fullMessage);
-    const response = result.response;
-    const assistantMessage = response.text();
-
-    if (!assistantMessage) {
-      return NextResponse.json(
-        { error: 'Failed to generate response from Gemini' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      message: assistantMessage,
-      usage: {
-        model: 'gemini-pro',
-        inputTokens: 'N/A',
-        outputTokens: 'N/A',
+    // Build messages for API
+    const messages = [
+      {
+        role: 'user',
+        parts: [{ text: systemPrompt }],
       },
-    });
-  } catch (error) {
-    console.error('[RAH Chatbot API Error]:', error);
+      {
+        role: 'model',
+        parts: [{ text: 'नमस्ते! I am RAH, your Indian tourism guide. How can I help you?' }],
+      },
+      ...conversationHistory.map((msg: any) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }],
+      })),
+      {
+        role: 'user',
+        parts: [{ text: message }],
+      },
+    ];
 
-    if (error instanceof Error) {
-      // Handle Gemini-specific errors
-      if (error.message.includes('401') || error.message.includes('Unauthorized') || error.message.includes('API key')) {
+    // Call Gemini API directly with REST endpoint
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: messages,
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          maxOutputTokens: 500,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[RAH Chatbot] Gemini API error:', errorData);
+      
+      if (response.status === 401) {
         return NextResponse.json(
-          { error: 'Authentication failed. Please check your Gemini API key.' },
+          { error: 'Authentication failed. Invalid Gemini API key.' },
           { status: 401 }
         );
       }
-
-      if (error.message.includes('429') || error.message.includes('rate limit')) {
+      
+      if (response.status === 429) {
         return NextResponse.json(
           { error: 'Rate limit exceeded. Please try again in a moment.' },
           { status: 429 }
         );
       }
 
-      if (error.message.includes('500') || error.message.includes('server error')) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    const assistantMessage = 
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      'Sorry, I could not generate a response. Please try again.';
+
+    return NextResponse.json({
+      message: assistantMessage,
+      usage: {
+        model: 'gemini-2.0-flash',
+      },
+    });
+  } catch (error) {
+    console.error('[RAH Chatbot API Error]:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('API key') || error.message.includes('401')) {
         return NextResponse.json(
-          { error: 'Gemini service is temporarily unavailable. Please try again later.' },
-          { status: 503 }
+          { error: 'Authentication failed. Please check your Gemini API key.' },
+          { status: 401 }
         );
       }
     }
@@ -148,6 +145,6 @@ export async function GET() {
   return NextResponse.json({
     message: 'RAH Tourist Guide API is running',
     status: 'healthy',
-    aiProvider: 'Google Gemini Pro',
+    aiProvider: 'Google Gemini 1.5 Flash',
   });
 }
