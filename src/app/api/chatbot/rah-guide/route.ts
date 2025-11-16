@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
  * RAH Tourist Guide API Endpoint
- * Handles AI-powered Indian tourism guidance using OpenAI
+ * Handles AI-powered Indian tourism guidance using Google Gemini
  * 
  * POST /api/chatbot/rah-guide
  * Body: { message: string, conversationHistory: Array }
@@ -19,19 +20,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('[RAH Chatbot] OpenAI API key not configured');
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[RAH Chatbot] Gemini API key not configured');
       return NextResponse.json(
-        { error: 'AI service not configured. Please set OPENAI_API_KEY environment variable.' },
+        { error: 'AI service not configured. Please set GEMINI_API_KEY environment variable.' },
         { status: 500 }
       );
     }
 
-    // Lazy-load OpenAI only when API is called
-    const { OpenAI } = await import('openai');
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Initialize Gemini client
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     // System prompt for RAH Tourist Guide
     const systemPrompt = `You are RAH (Reliable Assistance & Hospitality), an expert Indian tourism guide AI assistant. You provide comprehensive, accurate, and helpful information about:
@@ -70,53 +68,53 @@ export async function POST(request: NextRequest) {
 - Suggest current travel advisories when relevant
 - Be honest about limitations and recommend expert consultation for complex issues`;
 
-    // Build conversation history
-    const messages = [
-      ...conversationHistory.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      {
-        role: 'user' as const,
-        content: message,
-      },
-    ];
-
-    // Call OpenAI API
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        ...messages,
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
-      top_p: 0.9,
+    // Get the generative model
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-pro',
     });
 
-    const assistantMessage =
-      response.choices[0]?.message?.content || 
-      'Sorry, I could not generate a response. Please try again.';
+    // Build conversation history for context
+    const history = conversationHistory.map((msg: any) => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
+
+    // Start a chat session with history
+    const chat = model.startChat({
+      history: history,
+    });
+
+    // Prepend system prompt to user message for context
+    const fullMessage = `${systemPrompt}\n\nUser Query: ${message}`;
+
+    // Send the user message
+    const result = await chat.sendMessage(fullMessage);
+    const response = result.response;
+    const assistantMessage = response.text();
+
+    if (!assistantMessage) {
+      return NextResponse.json(
+        { error: 'Failed to generate response from Gemini' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       message: assistantMessage,
       usage: {
-        promptTokens: response.usage?.prompt_tokens,
-        completionTokens: response.usage?.completion_tokens,
-        totalTokens: response.usage?.total_tokens,
+        model: 'gemini-pro',
+        inputTokens: 'N/A',
+        outputTokens: 'N/A',
       },
     });
   } catch (error) {
     console.error('[RAH Chatbot API Error]:', error);
 
     if (error instanceof Error) {
-      // Handle OpenAI-specific errors
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      // Handle Gemini-specific errors
+      if (error.message.includes('401') || error.message.includes('Unauthorized') || error.message.includes('API key')) {
         return NextResponse.json(
-          { error: 'Authentication failed. Please check your OpenAI API key.' },
+          { error: 'Authentication failed. Please check your Gemini API key.' },
           { status: 401 }
         );
       }
@@ -130,7 +128,7 @@ export async function POST(request: NextRequest) {
 
       if (error.message.includes('500') || error.message.includes('server error')) {
         return NextResponse.json(
-          { error: 'OpenAI service is temporarily unavailable. Please try again later.' },
+          { error: 'Gemini service is temporarily unavailable. Please try again later.' },
           { status: 503 }
         );
       }
@@ -150,5 +148,6 @@ export async function GET() {
   return NextResponse.json({
     message: 'RAH Tourist Guide API is running',
     status: 'healthy',
+    aiProvider: 'Google Gemini Pro',
   });
 }

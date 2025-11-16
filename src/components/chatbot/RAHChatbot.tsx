@@ -100,7 +100,7 @@ export default function RAHChatbot() {
       // Add error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error processing your request. Please check your API configuration and try again.',
+        content: 'Sorry, I encountered an error processing your request. Please check your Gemini API configuration and try again.',
         sender: 'assistant',
         timestamp: new Date(),
       };
