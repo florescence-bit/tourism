@@ -16,6 +16,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { onAuthChange, isFirebaseConfigured } from '@/lib/firebaseClient';
 import Header from '@/components/layout/header';
 import Sidebar from '@/components/layout/sidebar';
+import RAHChatbot from '@/components/chatbot/RAHChatbot';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   // Current authenticated user or null
@@ -128,6 +129,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </main>
         </div>
+        <RAHChatbot />
       </div>
     );
   }
@@ -151,6 +153,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <RAHChatbot />
     </div>
   );
 }

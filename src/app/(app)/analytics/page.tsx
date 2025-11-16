@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, Shield, User, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertCircle, Shield, User, Calendar, MapPin } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -17,6 +17,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { onAuthChange, getUserAnalytics, getProfile } from '@/lib/firebaseClient';
+import CrimeHeatMap from '@/components/map/CrimeHeatMap';
 
 export default function Analytics() {
   const [user, setUser] = useState<any>(null);
@@ -235,6 +236,23 @@ export default function Analytics() {
               <p className="text-text-secondary text-center py-12">No data available yet</p>
             )}
           </div>
+        </div>
+
+        {/* CRIME HEAT MAP */}
+        <div className="card-base p-6 border border-surface-secondary/50 mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <MapPin size={20} className="text-accent-red" />
+            Area Crime Heat Map
+          </h2>
+          <p className="text-sm text-text-secondary mb-4">
+            Visualize crime hotspots in your area. Green areas indicate low crime rates while red areas indicate higher risk zones. Click on markers for detailed information.
+          </p>
+          <CrimeHeatMap 
+            latitude={28.6139} 
+            longitude={77.209}
+            className="w-full"
+            showLegend={true}
+          />
         </div>
 
         {/* ACTIVITY SUMMARY */}
